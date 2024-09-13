@@ -1,13 +1,3 @@
-// Context.jsx
-import React, { createContext, useContext, useState } from 'react';
-
-
-const PlayerContext = createContext();
-
-
-export const PlayerProvider = ({ children }) => {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentSong, setCurrentSong] = useState(null);
   const Latest = [
     { 
 "id": "zDzWQVkb",
@@ -702,35 +692,3 @@ const TopArtists = [
 
 
 ]
-const [isOpen, setIsOpen] = useState(false);
-
-
-const toggleDrawer = () => {
-  setIsOpen(!isOpen);
-};
-
-  
-  const playSong = (song) => {
-    setIsPlaying(false);
-    setCurrentSong(song);
-
-    
-    setTimeout(() => {
-      setIsPlaying(true);
-    }, 0);
-  };
-
- 
-  const togglePlayPause = () => {
-    setIsPlaying(prev => !prev);
-  };
-
-  return (
-    <PlayerContext.Provider value={{ isPlaying, togglePlayPause, playSong, currentSong, setIsPlaying, Latest, TopArtists, isOpen, toggleDrawer }}>
-      {children}
-    </PlayerContext.Provider>
-  );
-};
-
-
-export const usePlayer = () => useContext(PlayerContext);

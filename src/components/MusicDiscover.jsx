@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaSearch, FaPlay, FaPause, FaHeadphones } from 'react-icons/fa';
+import { FaSearch, FaPlay, FaPause, FaHeadphones, FaHeart as FaHeartRegular, FaHeart as FaHeartSolid} from 'react-icons/fa';
 import { usePlayer } from '../Context/Context';
 import Loader from './Loader';
 import './player.css'
@@ -8,11 +8,13 @@ import AppDrawer from './AppDrawer';
 const MusicDiscover = () => {
   const [searchQuery, setSearchQuery] = useState('mitraz');
   const [songs, setSongs] = useState([]);
+  const [favorite, setFavorite] = useState([]);
+   const [isFavorite, setIsFavorite] = useState(false);
   const [activeTab, setActiveTab] = useState('Songs');
   
   const [isPlayerVisible, setIsPlayerVisible] = useState(false);
   const [currentSong, setCurrentSong] = useState(null);
-  const { isPlaying, setIsPlaying, playSong, Latest } = usePlayer();
+  const { isPlaying, setIsPlaying, playSong, Latest, isOpen, toggleDrawer } = usePlayer();
 
   const audioRef = useRef(new Audio());
 
@@ -98,6 +100,46 @@ const MusicDiscover = () => {
     audioRef.current.currentTime = newTime;
     setProgress(e.target.value);
   };
+ // Load favorite songs from localStorage on component mount
+ useEffect(() => {
+  try {
+    const storedFavorites = localStorage.getItem('favoriteSongs');
+    const favoriteSongs = storedFavorites ? JSON.parse(storedFavorites) : [];
+    setFavorite(favoriteSongs);
+  } catch (error) {
+    console.error('Error parsing favorite songs from localStorage:', error);
+    setFavorite([]);
+  }
+}, []);
+
+useEffect(() => {
+  if (currentSong) {
+    const isSongFavorite = favorite.some(fav => fav.id === currentSong.id);
+    setIsFavorite(isSongFavorite);
+  }
+}, [currentSong, favorite]);
+
+const handleFavorite = (song) => {
+  try {
+    const storedFavorites = localStorage.getItem('favoriteSongs');
+    const favoriteSongs = storedFavorites ? JSON.parse(storedFavorites) : [];
+    const isAlreadyFavorite = favoriteSongs.some(fav => fav.id === song.id);
+
+    const updatedFavorites = isAlreadyFavorite
+      ? favoriteSongs.filter(fav => fav.id !== song.id)
+      : [...favoriteSongs, song];
+
+    localStorage.setItem('favoriteSongs', JSON.stringify(updatedFavorites));
+    setFavorite(updatedFavorites);
+    setIsFavorite(!isAlreadyFavorite); // Toggle the state
+  } catch (error) {
+    console.error('Error handling favorite status:', error);
+  }
+};
+const isSongFavorite = (songId) => {
+  return favorite.some(fav => fav.id === songId);
+};
+
 
   return (
     <div className="flex flex-col items-center justify-between min-h-screen px-4 py-6 bg-gray-50">
@@ -128,10 +170,10 @@ const MusicDiscover = () => {
             Latest
           </span>
           <span
-            onClick={() => setActiveTab('Albums')}
+            onClick={() => setActiveTab('Favorite')}
             className={`cursor-pointer ${activeTab === 'Albums' ? 'border-b-2 border-yellow-400' : 'text-gray-400 hover:text-gray-800'}`}
           >
-            Albums
+            Favorite
           </span>
           <span
             onClick={() => {setActiveTab('Artists'),  setIsPlayerVisible(false)} }
@@ -147,10 +189,10 @@ const MusicDiscover = () => {
               {songs.length > 0 ? songs.map((song, index) => (
                 <li
                   key={index}
-                  className="flex items-center justify-between p-2 bg-white rounded-lg shadow cursor-pointer"
-                  onClick={() => handleSongClick(song)}
+                  className="flex items-center justify-between p-2 bg-white rounded-lg shadow "
+                  
                 >
-                  <div className="flex items-center">
+                  <div className="flex items-center" >
                     <img
                       src={song.image[0].link}
                       alt={song.title}
@@ -158,12 +200,16 @@ const MusicDiscover = () => {
                      
                     />
                     <div className="ml-3">
-                      <h4 className="text-base font-semibold">{song.name}</h4>
+                      <h4 className="text-base font-semibold cursor-pointer" onClick={() => handleSongClick(song)}>{song.name}</h4>
                       <p className="text-sm text-gray-500">
                         {song.primaryArtists} &nbsp; &nbsp;
                         <span className="text-sm text-gray-400">
                           {song.formattedDuration}
+                        </span> &nbsp; &nbsp; &nbsp; &nbsp;
+                        <span onClick={(e) => { e.stopPropagation(); handleFavorite(song); }}>
+                          {isSongFavorite(song.id) ? <FaHeartSolid color="red" /> : <FaHeartRegular />}
                         </span>
+
                       </p>
                     </div>
                   </div>
@@ -204,11 +250,66 @@ const MusicDiscover = () => {
             </div>
           </div>
         )}
-        {activeTab === 'Albums' && (
+        {activeTab === 'Favorite' && (
           <div>
-            <h3 className="mb-4 text-lg font-semibold">Albums</h3>
-            
-            <AppDrawer />
+            <h3 className="mb-4 text-lg font-semibold cursor-pointer" onClick={toggleDrawer}>Favorites <i className="fa-solid fa-star " style={{color: '#fcd34d'}}></i></h3>
+            <svg className="animate-bounce w-6 h-6 ...">
+  
+</svg>
+            <div className={`app-drawer ${isOpen ? 'open' : ''}`}>
+      <span className='backButton ' onClick={toggleDrawer}><i className="fa-solid fa-chevron-down"></i></span>
+      
+<button className="button hidden" onClick={toggleDrawer}>
+  <svg className="svgIcon" viewBox="0 0 384 512">
+    <path
+      d="M214.6 41.4c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 141.2V448c0 17.7 14.3 32 32 32s32-14.3 32-32V141.2L329.4 246.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-160-160z"
+    ></path>
+  </svg>
+</button>
+
+      
+      <div className="drawer-handle" onClick={toggleDrawer}>
+        <span className="handle-bar"></span>
+      </div>
+      <div className="app-list">
+        <h2>App Drawer</h2>
+        <ul>
+          {favorite.length > 0 ? favorite.map((song, index) => (
+             <li
+             key={index}
+             className="flex items-center justify-between p-2 bg-white rounded-lg shadow cursor-pointer"
+             
+           >
+             <div className="flex items-center" onClick={() => handleSongClick(song)}>
+               <img
+                 src={song.image[0].link}
+                 alt={song.title}
+                 className="w-10 h-10 rounded-lg cursor-pointer"
+                
+               />
+               <div className="ml-3">
+                 <h4 className="text-base font-semibold" >{song.name}</h4>
+                 <p className="text-sm text-gray-500">
+                   {song.primaryArtists} &nbsp; &nbsp;
+                   <span className="text-sm text-gray-400">
+                     {song.formattedDuration}
+                   </span> &nbsp; &nbsp; &nbsp; &nbsp;
+                   <i className={`fa-heart fa-solid `} style={{ cursor: 'pointer', color: '#dc2626' }}></i>
+                 </p>
+               </div>
+             </div>
+             <button
+                    onClick={() => togglePlayPause(song.downloadUrl[3].link)}
+                    className="text-gray-400 cursor-pointer"
+                  >
+                    {isPlaying && audioRef.current.src === song.downloadUrl[3].link ? <FaPause /> : <FaPlay />}
+                  </button>
+
+           </li>
+          )) : <Loader />}
+        </ul>
+      </div>
+    </div>
           </div>
         )}
         {activeTab === 'Artists' && (
