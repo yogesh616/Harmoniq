@@ -60,7 +60,7 @@ const MusicDiscover = () => {
 
   async function getData() {
     try {
-      const response = await fetch(`/search/songs?query=${searchQuery}&limit=10&page=1`);
+      const response = await fetch(`https://jiosaavn-api-privatecvc2.vercel.app/search/songs?query=${searchQuery}&limit=10&page=1`);
       const data = await response.json();
       const formattedSongs = data.data.results.map((song) => ({
         ...song,
@@ -144,7 +144,7 @@ const isSongFavorite = (songId) => {
   return (
     <div className="flex flex-col items-center justify-between min-h-screen px-4 py-6 bg-gray-50">
       <div className="w-full max-w-md">
-        <h1 className="text-3xl font-bold logo">Harmoniq </h1>
+        <h1 className="text-3xl font-bold logo">Syncy </h1>
         <div className="flex items-center mt-4 mb-8 bg-gray-100 rounded-full">
           <FaSearch onClick={handleSearch} className="w-5 h-5 ml-3 text-gray-500 cursor-pointer" />
           <input
@@ -214,7 +214,7 @@ const isSongFavorite = (songId) => {
                     </div>
                   </div>
                   <button
-                    onClick={() => togglePlayPause(song.downloadUrl[3].link)}
+                    onClick={() => {togglePlayPause(song.downloadUrl[3].link), handleSongClick(song)}}
                     className="text-gray-400 cursor-pointer"
                   >
                     {isPlaying && audioRef.current.src === song.downloadUrl[3].link ? <FaPause /> : <FaPlay />}
