@@ -58,7 +58,7 @@ const MusicDiscover = () => {
 
   async function getData() {
     try {
-      const response = await fetch(`/search/songs?query=${searchQuery}&limit=10&page=1`);
+      const response = await fetch(`https://jiosaavn-api-privatecvc2.vercel.app/search/songs?query=${searchQuery}&limit=10&page=1`);
       const data = await response.json();
       const formattedSongs = data.data.results.map((song) => ({
         ...song,
