@@ -703,7 +703,11 @@ const TopArtists = [
 
 ]
 const [isOpen, setIsOpen] = useState(false);
+const [isArtistOpen, setIsArtistOpen] = useState(false)
 
+const toggleArtistDrawer = () => {
+  setIsArtistOpen(!isArtistOpen)
+}
 
 const toggleDrawer = () => {
   setIsOpen(!isOpen);
@@ -726,7 +730,7 @@ const toggleDrawer = () => {
   };
 
   return (
-    <PlayerContext.Provider value={{ isPlaying, togglePlayPause, playSong, currentSong, setIsPlaying, Latest, TopArtists, isOpen, toggleDrawer }}>
+    <PlayerContext.Provider value={{ isPlaying, togglePlayPause, playSong, currentSong, setIsPlaying, Latest, TopArtists, isOpen, toggleDrawer, isArtistOpen, toggleArtistDrawer}}>
       {children}
     </PlayerContext.Provider>
   );

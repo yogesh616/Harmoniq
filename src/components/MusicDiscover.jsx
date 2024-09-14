@@ -11,11 +11,12 @@ const MusicDiscover = () => {
   const [favorite, setFavorite] = useState([]);
    const [isFavorite, setIsFavorite] = useState(false);
   const [activeTab, setActiveTab] = useState('Songs');
-  
+  const [searchArtist, setSearchArtist] = useState('');
+  const [artistSongs, setArtistSongs] = useState([]);
   const [isPlayerVisible, setIsPlayerVisible] = useState(false);
   const [currentSong, setCurrentSong] = useState(null);
-  const { isPlaying, setIsPlaying, playSong, Latest, isOpen, toggleDrawer } = usePlayer();
-
+  const { isPlaying, setIsPlaying, playSong, Latest, isOpen, toggleDrawer, TopArtists, isArtistOpen, toggleArtistDrawer } = usePlayer();
+const [isLoading, setIsLoading] = useState(false);
   const audioRef = useRef(new Audio());
 
   useEffect(() => {
@@ -25,7 +26,7 @@ const MusicDiscover = () => {
 
   useEffect(() => {
     if (isPlaying && currentSong) {
-      audioRef.current.src = currentSong.downloadUrl;
+      audioRef.current.src = currentSong.downloadUrl[3].link;
       audioRef.current.play().catch((error) => console.error('Error playing audio:', error));
     } else {
       audioRef.current.pause();
@@ -49,18 +50,22 @@ const MusicDiscover = () => {
 
   const handleSongClick = (song) => {
     setCurrentSong({
-      title: song.name,
-      name: song.primaryArtists,
-      albumArt: song.image[2].link,
-      downloadUrl: song.downloadUrl[3].link,
+      name: song.name,
+      primaryArtists: song.primaryArtists,
+      image: song.image,
+      downloadUrl: song.downloadUrl,
+      id: song.id,
+      album: song.album,
+
     });
     playSong();
     setIsPlayerVisible(true);
+    console.log(song)
   };
 
   async function getData() {
     try {
-      const response = await fetch(`https://jiosaavn-api-privatecvc2.vercel.app/search/songs?query=${searchQuery}&limit=10&page=1`);
+      const response = await fetch(`https://jiosaavn-api-privatecvc2.vercel.app/search/songs?query=${searchQuery}&limit=20&page=1`);
       const data = await response.json();
       const formattedSongs = data.data.results.map((song) => ({
         ...song,
@@ -139,6 +144,26 @@ const handleFavorite = (song) => {
 const isSongFavorite = (songId) => {
   return favorite.some(fav => fav.id === songId);
 };
+
+async function getArtistSongs(search) {
+  try {
+    setIsLoading(true);
+    const response = await fetch(`https://jiosaavn-api-privatecvc2.vercel.app/search/songs?query=${search}&limit=20&page=1`);
+    const data = await response.json();
+    setArtistSongs(data.data.results)
+    setIsLoading(false);
+  } catch (error) {
+    console.error("Error fetching songs:", error);
+    setArtistSongs([]);
+    setIsLoading(false);
+  }
+}
+useEffect(() => {
+  console.log('artistSongs', artistSongs);
+}, [artistSongs])
+
+
+
 
 
   return (
@@ -272,8 +297,8 @@ const isSongFavorite = (songId) => {
         <span className="handle-bar"></span>
       </div>
       <div className="app-list">
-        <h2>App Drawer</h2>
-        <ul>
+        <h2 className='heart-beat'>Heart Beats</h2>
+        <ul className='song-list'>
           {favorite.length > 0 ? favorite.map((song, index) => (
              <li
              key={index}
@@ -314,9 +339,94 @@ const isSongFavorite = (songId) => {
         )}
         {activeTab === 'Artists' && (
           <div>
-            <h3 className="mb-4 text-lg font-semibold"> Top Artists</h3>
+            <h3 className="mb-4 text-lg font-semibold" > Top Artists</h3>
             <div>
-              <TopArtist />
+
+            {TopArtists.length > 0 ? (
+                <section 
+                    className='grid grid-cols-2 gap-4 mb-10 md:grid-cols-2 md:gap-8 lg:grid-cols-5 lg:grid-rows-2'>
+                    {TopArtists.map((artist, index) => (
+                        <div key={index} className='relative flex flex-col items-center'>
+                            {/* Artist Image with Play Button Overlay */}
+                            <div className='relative group cursor-pointer' onClick={() => {getArtistSongs(artist.name); toggleArtistDrawer();}} >
+                                <img 
+                                    src={artist.image[2].link} 
+                                    alt={artist.name} 
+                                    className='w-24 h-24 md:w-32 md:h-32 lg:w-40 lg:h-auto rounded-full object-cover'
+                                    
+                                   
+                                />
+                                {/* Play Button Overlay */}
+                                <div className='absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 rounded-full'>
+                                    <button className='text-white text-2xl'>▶</button>
+                                </div>
+                               
+                            </div>
+                            {/* Artist Name */}
+                            <span className='mt-2 text-sm font-semibold text-center'  >{artist.name}</span>
+                        </div>
+                    ))}
+                </section>
+            ) : (
+                <Loader />
+            )}
+            </div>
+            {/* Artist Drawer */}
+            <div>
+            <div className={`app-drawer z-50 ${isArtistOpen ? 'open' : ''}`}>
+      <span className='backButton ' onClick={toggleArtistDrawer}><i className="fa-solid fa-chevron-down"></i></span>
+      
+<button className="button hidden" onClick={toggleArtistDrawer}>
+  <svg className="svgIcon" viewBox="0 0 384 512">
+    <path
+      d="M214.6 41.4c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 141.2V448c0 17.7 14.3 32 32 32s32-14.3 32-32V141.2L329.4 246.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-160-160z"
+    ></path>
+  </svg>
+</button>
+
+      
+      <div className="drawer-handle" onClick={toggleArtistDrawer}>
+        <span className="handle-bar"></span>
+      </div>
+      <div className="app-list">
+        <h2>Heart Beats</h2>
+        <ul className='song-list'>
+          {artistSongs.length > 0 ? artistSongs.map((song, index) => (
+             <li
+             key={index}
+             className="flex items-center justify-between p-2 bg-white rounded-lg shadow cursor-pointer"
+             
+           >
+             <div className="flex items-center" onClick={() => handleSongClick(song)}>
+               <img
+                 src={song.image[0].link}
+                 alt={song.title}
+                 className="w-10 h-10 rounded-lg cursor-pointer"
+                
+               />
+               <div className="ml-3">
+                 <h4 className="text-base font-semibold" >{song.name}</h4>
+                 <p className="text-sm text-gray-500">
+                   {song.primaryArtists} &nbsp; &nbsp;
+                   <span className="text-sm text-gray-400">
+                     {song.formattedDuration}
+                   </span> &nbsp; &nbsp; &nbsp; &nbsp;
+                  
+                 </p>
+               </div>
+             </div>
+             <button
+                    onClick={() => togglePlayPause(song.downloadUrl[3].link)}
+                    className="text-gray-400 cursor-pointer"
+                  >
+                    {isPlaying && audioRef.current.src === song.downloadUrl[3].link ? <FaPause /> : <FaPlay />}
+                  </button>
+
+           </li>
+          )) : <Loader />}
+        </ul>
+      </div>
+    </div>
             </div>
           </div>
         )}
@@ -327,7 +437,7 @@ const isSongFavorite = (songId) => {
         <div className="fixed bottom-0 w-full max-w-md px-4 bg-white rounded-t-xl shadow-md">
           <div className="flex flex-col items-center py-4">
             <img
-              src={currentSong.albumArt}
+              src={currentSong.image[2].link}
               alt="Album Art"
               className="w-72 h-72 rounded-lg shadow-lg"
             />
@@ -340,6 +450,9 @@ const isSongFavorite = (songId) => {
               >
                 {isPlaying ? <FaPause /> : <FaPlay />}
               </button>
+              <span onClick={(e) => { e.stopPropagation(); handleFavorite(currentSong); }}>
+                          {isSongFavorite(currentSong.id) ? <FaHeartSolid color="red" /> : <FaHeartRegular />}
+                        </span>
               <button
                 onClick={() => {
                   setIsPlayerVisible(false);
