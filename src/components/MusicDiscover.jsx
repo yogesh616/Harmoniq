@@ -472,8 +472,8 @@ async function getCategorySongs(id) {
         {activeTab == 'Categories' && (
           <div>
              <h3 className="mb-4 text-lg font-semibold" > Find Categories</h3>
-             <div className="flex items-center justify-center h-full">
-             <button   className="animatedButton mx-1 " onClick={() => handleCategories('hindi')}>Hindi</button>
+             <div className="flex items-center justify-center h-full w-11/12 mx-auto">
+               <button   className="animatedButton mx-1 " onClick={() => handleCategories('hindi')}>Hindi</button>
                <button className="animatedButton mx-1" onClick={() => handleCategories('english')}>English</button>
                <button className="animatedButton mx-1" onClick={() => handleCategories('punjabi')}>Punjabi</button>
                <button className="animatedButton mx-1 me-1" onClick={() => handleCategories('haryanvi')}>Haryanvi</button>
@@ -503,44 +503,69 @@ async function getCategorySongs(id) {
                             <span className='mt-2 text-sm font-semibold text-center'  >{chart.title}</span>
                         </div>
                     ))}
-         <div className={`app-drawer z-50 ${isCategoryOpen ? 'open' : ''}`}>
-         <span className='backButton ' onClick={toggleCategoryDrawer}><i className="fa-solid fa-chevron-down"></i></span>
-         <ul className='song-list'>
-          {CategorySongs.length > 0 ? CategorySongs.map((song, index) => (
-             <li
-             key={index}
-             className="flex items-center justify-between p-2 bg-white rounded-lg shadow cursor-pointer"
-             
-           >
-             <div className="flex items-center" onClick={() => handleSongClick(song)}>
-               <img
-                 src={song.image[0].link}
-                 alt={song.title}
-                 className="w-10 h-10 rounded-lg cursor-pointer"
-                
-               />
-               <div className="ml-3">
-                 <h4 className="text-base font-semibold" >{song.name}</h4>
-                 <p className="text-sm text-gray-500">
-                   {song.primaryArtists} &nbsp; &nbsp;
-                   <span className="text-sm text-gray-400">
-                     {song.formattedDuration}
-                   </span> &nbsp; &nbsp; &nbsp; &nbsp;
-                  
-                 </p>
-               </div>
-             </div>
-             <button
-                    onClick={() => togglePlayPause(song.downloadUrl[3].link)}
-                    className="text-gray-400 cursor-pointer"
-                  >
-                    {isPlaying && audioRef.current.src === song.downloadUrl[3].link ? <FaPause /> : <FaPlay />}
-                  </button>
+        <div className={`app-drawer z-50 ${isCategoryOpen ? 'open' : ''}`}>
+  {/* Back Button */}
+  <span className='backButton' onClick={toggleCategoryDrawer}>
+    <i className="fa-solid fa-chevron-down"></i>
+  </span>
 
-           </li>
-          )) : <Loader />}
-        </ul>
-        </div>
+  {/* Drawer Toggle Button */}
+  <button className="button hidden" onClick={toggleCategoryDrawer}>
+    <svg className="svgIcon" viewBox="0 0 384 512">
+      <path d="M214.6 41.4c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 141.2V448c0 17.7 14.3 32 32 32s32-14.3 32-32V141.2L329.4 246.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-160-160z"></path>
+    </svg>
+  </button>
+
+  {/* Drawer Handle */}
+  <div className="drawer-handle" onClick={toggleCategoryDrawer}>
+    <span className="handle-bar"></span>
+  </div>
+
+  {/* Song List */}
+  <div className='app-list manualWidth'>
+   
+    <ul className='song-list'>
+    
+      {CategorySongs.length > 0 ? (
+        CategorySongs.map((song, index) => (
+          <li
+            key={index}
+            className="flex items-center justify-between p-2 bg-white rounded-lg shadow cursor-pointer"
+          >
+            <div className="flex items-center" onClick={() => handleSongClick(song)}>
+              <img
+                src={song.image[0].link}
+                alt={song.title}
+                className="w-10 h-10 rounded-lg cursor-pointer"
+              />
+              <div className="ml-3">
+                <h4 className="text-base font-semibold">{song.name}</h4>
+                <p className="text-sm text-gray-500">
+                  {song.primaryArtists} &nbsp; &nbsp;
+                  <span className="text-sm text-gray-400">{song.formattedDuration}</span>
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => togglePlayPause(song.downloadUrl[3].link)}
+              className="text-gray-400 cursor-pointer"
+            >
+              {isPlaying && audioRef.current.src === song.downloadUrl[3].link ? (
+                <FaPause />
+              ) : (
+                <FaPlay />
+              )}
+            </button>
+          </li>
+        ))
+      ) : (
+        <Loader />
+      )}
+    </ul>
+  </div>
+</div>
+
                 </section>
             )}
 
