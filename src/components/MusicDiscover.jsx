@@ -1,23 +1,31 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaSearch, FaPlay, FaPause, FaHeadphones, FaHeart as FaHeartRegular, FaHeart as FaHeartSolid} from 'react-icons/fa';
+import { FaTimes, FaPlay, FaPause, FaHeadphones, FaHeart as FaHeartRegular, FaHeart as FaHeartSolid} from 'react-icons/fa';
 import { usePlayer } from '../Context/Context';
 import Loader from './Loader';
 import './player.css'
 import TopArtist from './TopArtist';
 import AppDrawer from './AppDrawer';
+import axios from 'axios';
 const MusicDiscover = () => {
   const [searchQuery, setSearchQuery] = useState('mitraz');
   const [songs, setSongs] = useState([]);
   const [favorite, setFavorite] = useState([]);
-   const [isFavorite, setIsFavorite] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
   const [activeTab, setActiveTab] = useState('Songs');
   const [searchArtist, setSearchArtist] = useState('');
   const [artistSongs, setArtistSongs] = useState([]);
   const [isPlayerVisible, setIsPlayerVisible] = useState(false);
   const [currentSong, setCurrentSong] = useState(null);
-  const { isPlaying, setIsPlaying, playSong, Latest, isOpen, toggleDrawer, TopArtists, isArtistOpen, toggleArtistDrawer } = usePlayer();
-const [isLoading, setIsLoading] = useState(false);
+  const { isPlaying, setIsPlaying, playSong, Latest, isOpen, toggleDrawer, TopArtists, isArtistOpen, toggleArtistDrawer, isCategoryOpen, toggleCategoryDrawer } = usePlayer();
+  const [isLoading, setIsLoading] = useState(false);
   const audioRef = useRef(new Audio());
+  const [category, setCategory] = useState('hindi');
+  const [categoryData, setCategoryData] = useState([]);
+  const [CategorySongs, setCategorySongs] = useState([]);
+
+
+
+
 
   useEffect(() => {
     getData();
@@ -60,13 +68,13 @@ const [isLoading, setIsLoading] = useState(false);
     });
     playSong();
     setIsPlayerVisible(true);
-    console.log(song)
+    
   };
 
   async function getData() {
     try {
-      const response = await fetch(`https://jiosaavn-api-privatecvc2.vercel.app/search/songs?query=${searchQuery}&limit=20&page=1`);
-      const data = await response.json();
+      const response  = await axios.get(`https://jiosaavn-api-privatecvc2.vercel.app/search/songs?query=${searchQuery}&limit=20&page=1`);
+      const data = await response.data;
       const formattedSongs = data.data.results.map((song) => ({
         ...song,
         formattedDuration: formatDuration(song.duration),
@@ -78,7 +86,7 @@ const [isLoading, setIsLoading] = useState(false);
   }
 
   const handleSearch = () => {
-    getData();
+    setSearchQuery('')
   };
 
   const formatDuration = (duration) => {
@@ -148,8 +156,8 @@ const isSongFavorite = (songId) => {
 async function getArtistSongs(search) {
   try {
     setIsLoading(true);
-    const response = await fetch(`https://jiosaavn-api-privatecvc2.vercel.app/search/songs?query=${search}&limit=20&page=1`);
-    const data = await response.json();
+    const response = await axios.get(`https://jiosaavn-api-privatecvc2.vercel.app/search/songs?query=${search}&limit=20&page=1`);
+    const data = await response.data;
     setArtistSongs(data.data.results)
     setIsLoading(false);
   } catch (error) {
@@ -158,9 +166,33 @@ async function getArtistSongs(search) {
     setIsLoading(false);
   }
 }
-useEffect(() => {
-  console.log('artistSongs', artistSongs);
-}, [artistSongs])
+
+async function handleCategories(category) {
+  try {
+    const res = await axios.get(`https://jiosaavn-api-privatecvc2.vercel.app/modules?language=${category}`)
+    const data = await res.data;
+    setCategoryData(data.data.charts);
+  }
+  catch (error) {
+    console.error('Error fetching categories:', error);
+  }
+}
+
+
+
+async function getCategorySongs(id) {
+  try {
+    setIsLoading(true);
+    const res = await axios.get(`https://jiosaavn-api-privatecvc2.vercel.app/playlists?id=${id}`)
+    const data = await res.data;
+    setCategorySongs(data.data.songs)
+    setIsLoading(false);
+  }
+  catch (error) {
+    console.error('Error fetching category songs:', error);
+  }
+}
+
 
 
 
@@ -171,7 +203,7 @@ useEffect(() => {
       <div className="w-full max-w-md">
         <h1 className="text-3xl font-bold logo">Syncy </h1>
         <div className="flex items-center mt-4 mb-8 bg-gray-100 rounded-full">
-          <FaSearch onClick={handleSearch} className="w-5 h-5 ml-3 text-gray-500 cursor-pointer" />
+          <FaTimes onClick={handleSearch} className="w-5 h-5 ml-3 text-gray-500 cursor-pointer" />
           <input
             type="text"
             value={searchQuery}
@@ -181,22 +213,22 @@ useEffect(() => {
           />
           <FaHeadphones onClick={()=> setIsPlayerVisible(!isPlayerVisible)} className='cursor-pointer' />
         </div>
-        <div className="flex items-center justify-between w-full pb-2 mb-4 text-sm font-semibold border-b">
+        <div className="flex items-center justify-between w-full pb-2 mb-4 text-sm font-semibold border-b overflow-x-auto">
           <span
-            onClick={() => setActiveTab('Songs')}
+            onClick={() =>{ setActiveTab('Songs'); setIsPlayerVisible(false)} }
             className={`cursor-pointer ${activeTab === 'Songs' ? 'border-b-2 border-yellow-400' : 'text-gray-400 hover:text-gray-800'}`}
           >
             Songs
           </span>
           <span
-            onClick={() => setActiveTab('Latest')}
+            onClick={() => {setActiveTab('Latest'); setIsPlayerVisible(false)} }
             className={`cursor-pointer ${activeTab === 'Latest' ? 'border-b-2 border-yellow-400' : 'text-gray-400 hover:text-gray-800'}`}
           >
             Latest
           </span>
           <span
-            onClick={() => setActiveTab('Favorite')}
-            className={`cursor-pointer ${activeTab === 'Albums' ? 'border-b-2 border-yellow-400' : 'text-gray-400 hover:text-gray-800'}`}
+            onClick={() => {setActiveTab('Favorite'); setIsPlayerVisible(false)}}
+            className={`cursor-pointer ${activeTab === 'Favorite' ? 'border-b-2 border-yellow-400' : 'text-gray-400 hover:text-gray-800'}`}
           >
             Favorite
           </span>
@@ -206,6 +238,13 @@ useEffect(() => {
           >
             Artists
           </span>
+          <span
+            onClick={() => {setActiveTab('Categories'),  setIsPlayerVisible(false)} }
+            className={`cursor-pointer ${activeTab === 'Categories' ? 'border-b-2 border-yellow-400' : 'text-gray-400 hover:text-gray-800'}`}
+          >
+            Categories
+          </span>
+          
         </div>
         {activeTab === 'Songs' && (
           <div className="mb-12">
@@ -430,11 +469,88 @@ useEffect(() => {
             </div>
           </div>
         )}
+        {activeTab == 'Categories' && (
+          <div>
+             <h3 className="mb-4 text-lg font-semibold" > Find Categories</h3>
+             <div className="flex items-center justify-center h-full">
+             <button   className="animatedButton mx-1 " onClick={() => handleCategories('hindi')}>Hindi</button>
+               <button className="animatedButton mx-1" onClick={() => handleCategories('english')}>English</button>
+               <button className="animatedButton mx-1" onClick={() => handleCategories('punjabi')}>Punjabi</button>
+               <button className="animatedButton mx-1 me-1" onClick={() => handleCategories('haryanvi')}>Haryanvi</button>
+           </div>
+
+           {categoryData.length > 0 && (
+                <section 
+                    className='  grid grid-cols-2  gap-4 mb-10 md:grid-cols-2 md:gap-8 lg:grid-cols-5 lg:grid-rows-2'>
+                    {categoryData.map((chart, index) => (
+                        <div key={index} className='relative flex flex-col items-center mt-3'>
+                            {/* Artist Image with Play Button Overlay */}
+                            <div className='relative group cursor-pointer' onClick={() => { getCategorySongs(chart.id); toggleCategoryDrawer();}} >
+                                <img 
+                                    src={chart.image[2].link} 
+                                    alt={chart.name} 
+                                    className='w-24 h-24 md:w-32 md:h-32 lg:w-40 lg:h-auto rounded-full object-cover'
+                                    
+                                   
+                                />
+                                {/* Play Button Overlay */}
+                                <div className='absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 rounded-full'>
+                                    <button className='text-white text-2xl'>▶</button>
+                                </div>
+                               
+                            </div>
+                            {/* Artist Name */}
+                            <span className='mt-2 text-sm font-semibold text-center'  >{chart.title}</span>
+                        </div>
+                    ))}
+         <div className={`app-drawer z-50 ${isCategoryOpen ? 'open' : ''}`}>
+         <span className='backButton ' onClick={toggleCategoryDrawer}><i className="fa-solid fa-chevron-down"></i></span>
+         <ul className='song-list'>
+          {CategorySongs.length > 0 ? CategorySongs.map((song, index) => (
+             <li
+             key={index}
+             className="flex items-center justify-between p-2 bg-white rounded-lg shadow cursor-pointer"
+             
+           >
+             <div className="flex items-center" onClick={() => handleSongClick(song)}>
+               <img
+                 src={song.image[0].link}
+                 alt={song.title}
+                 className="w-10 h-10 rounded-lg cursor-pointer"
+                
+               />
+               <div className="ml-3">
+                 <h4 className="text-base font-semibold" >{song.name}</h4>
+                 <p className="text-sm text-gray-500">
+                   {song.primaryArtists} &nbsp; &nbsp;
+                   <span className="text-sm text-gray-400">
+                     {song.formattedDuration}
+                   </span> &nbsp; &nbsp; &nbsp; &nbsp;
+                  
+                 </p>
+               </div>
+             </div>
+             <button
+                    onClick={() => togglePlayPause(song.downloadUrl[3].link)}
+                    className="text-gray-400 cursor-pointer"
+                  >
+                    {isPlaying && audioRef.current.src === song.downloadUrl[3].link ? <FaPause /> : <FaPlay />}
+                  </button>
+
+           </li>
+          )) : <Loader />}
+        </ul>
+        </div>
+                </section>
+            )}
+
+            </div>
+        )}
       </div>
 
       {/* Player Component */}
       {isPlayerVisible && currentSong && (
-        <div className="fixed bottom-0 w-full max-w-md px-4 bg-white rounded-t-xl shadow-md">
+        <div className="fixed bottom-0 w-full max-w-md px-4 bg-white rounded-t-xl shadow-md z-50">
           <div className="flex flex-col items-center py-4">
             <img
               src={currentSong.image[2].link}
