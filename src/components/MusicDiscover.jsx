@@ -6,6 +6,7 @@ import './player.css'
 import TopArtist from './TopArtist';
 import AppDrawer from './AppDrawer';
 import axios from 'axios';
+import musicPng from '../assets/music.png'
 const MusicDiscover = () => {
   const [searchQuery, setSearchQuery] = useState('mitraz');
   const [songs, setSongs] = useState([]);
@@ -193,6 +194,9 @@ async function getCategorySongs(id) {
   }
 }
 
+useEffect(() => {
+  handleCategories('hindi');
+}, [])
 
 
 
@@ -220,14 +224,9 @@ async function getCategorySongs(id) {
           >
             Songs
           </span>
+          
           <span
-            onClick={() => {setActiveTab('Latest'); setIsPlayerVisible(false)} }
-            className={`cursor-pointer ${activeTab === 'Latest' ? 'border-b-2 border-yellow-400' : 'text-gray-400 hover:text-gray-800'}`}
-          >
-            Latest
-          </span>
-          <span
-            onClick={() => {setActiveTab('Favorite'); setIsPlayerVisible(false)}}
+            onClick={() => {setActiveTab('Favorite'); setIsPlayerVisible(false); setTimeout(() => toggleDrawer(), 200)}}
             className={`cursor-pointer ${activeTab === 'Favorite' ? 'border-b-2 border-yellow-400' : 'text-gray-400 hover:text-gray-800'}`}
           >
             Favorite
@@ -248,7 +247,30 @@ async function getCategorySongs(id) {
         </div>
         {activeTab === 'Songs' && (
           <div className="mb-12">
-            <h3 className="mb-4 text-lg font-semibold">Top Songs</h3>
+            <h3 className="mb-4 text-lg font-semibold">Latest Songs</h3>
+            <div className="overflow-x-auto">
+  <div className="flex gap-4 mb-10">
+    {Latest.length > 0 ? Latest.map((song, index) => (
+      <div key={index} className="min-w-[130px]">
+        <div className="relative cursor-pointer" onClick={() => handleSongClick(song)}>
+          <img
+            src={song.image[2].link}
+            alt="Popular Song"
+            className="rounded-lg"
+          />
+          <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center w-full bg-gray-900 bg-opacity-50 h-9 rounded-b-lg">
+            <button
+              onClick={() => togglePlayPause(song.downloadUrl[3].link)}
+              className="text-gray-400 cursor-pointer"
+            >
+              {isPlaying && audioRef.current.src === song.downloadUrl[3].link ? <FaPause /> : <FaPlay />}
+            </button>
+          </div>
+        </div>
+      </div>
+    )) : <Loader />}
+  </div>
+</div>
             <ul className="space-y-4">
               {songs.length > 0 ? songs.map((song, index) => (
                 <li
@@ -291,27 +313,30 @@ async function getCategorySongs(id) {
         {activeTab === 'Latest' && (
           <div>
             <h3 className="mb-4 text-lg font-semibold">Popular This Week</h3>
-            <div className="grid grid-cols-2 gap-4 mb-10 md:grid-cols-1 md:gap-8">
-              {Latest.length > 0 ? Latest.map((song, index) => (
-                <div key={index}>
-                  <div className="relative grid-rows-2 cursor-pointer"  onClick={() => handleSongClick(song)}>
-                    <img
-                      src={song.image[2].link}
-                      alt="Popular Song"
-                      className="rounded-lg"
-                    />
-                    <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center w-full bg-gray-900 bg-opacity-50 h-9 rounded-b-lg">
-                      <button
-                        onClick={() => togglePlayPause(song.downloadUrl[3].link)}
-                        className="text-gray-400 cursor-pointer"
-                      >
-                        {isPlaying && audioRef.current.src === song.downloadUrl[3].link ? <FaPause /> : <FaPlay />}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )) : <Loader />}
-            </div>
+            <div className="overflow-x-auto">
+  <div className="flex gap-4 mb-10">
+    {Latest.length > 0 ? Latest.map((song, index) => (
+      <div key={index} className="min-w-[200px]">
+        <div className="relative cursor-pointer" onClick={() => handleSongClick(song)}>
+          <img
+            src={song.image[2].link}
+            alt="Popular Song"
+            className="rounded-lg"
+          />
+          <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center w-full bg-gray-900 bg-opacity-50 h-9 rounded-b-lg">
+            <button
+              onClick={() => togglePlayPause(song.downloadUrl[3].link)}
+              className="text-gray-400 cursor-pointer"
+            >
+              {isPlaying && audioRef.current.src === song.downloadUrl[3].link ? <FaPause /> : <FaPlay />}
+            </button>
+          </div>
+        </div>
+      </div>
+    )) : <Loader />}
+  </div>
+</div>
+
           </div>
         )}
         {activeTab === 'Favorite' && (
@@ -424,10 +449,10 @@ async function getCategorySongs(id) {
 </button>
 
       
-      <div className="drawer-handle" onClick={toggleArtistDrawer}>
+      <div className="drawer-handle " onClick={toggleArtistDrawer}>
         <span className="handle-bar"></span>
       </div>
-      <div className="app-list">
+      <div className="app-list manualWidth">
         <h2>Heart Beats</h2>
         <ul className='song-list'>
           {artistSongs.length > 0 ? artistSongs.map((song, index) => (
@@ -472,11 +497,11 @@ async function getCategorySongs(id) {
         {activeTab == 'Categories' && (
           <div>
              <h3 className="mb-4 text-lg font-semibold" > Find Categories</h3>
-             <div className="flex items-center justify-center h-full w-11/12 mx-auto">
-               <button   className="animatedButton mx-1 " onClick={() => handleCategories('hindi')}>Hindi</button>
-               <button className="animatedButton mx-1" onClick={() => handleCategories('english')}>English</button>
-               <button className="animatedButton mx-1" onClick={() => handleCategories('punjabi')}>Punjabi</button>
-               <button className="animatedButton mx-1 me-1" onClick={() => handleCategories('haryanvi')}>Haryanvi</button>
+             <div className="flex items-center justify-center h-full  mx-auto" >
+               <button   className="animatedButton mx-0.5 " onClick={() => handleCategories('hindi')}>Hindi</button>
+               <button className="animatedButton mx-0.5" onClick={() => handleCategories('english')}>English</button>
+               <button className="animatedButton mx-0.5" onClick={() => handleCategories('punjabi')}>Punjabi</button>
+               <button className="animatedButton mx-0.5" onClick={() => handleCategories('haryanvi')}>Haryanvi</button>
            </div>
 
            {categoryData.length > 0 && (
@@ -578,7 +603,7 @@ async function getCategorySongs(id) {
         <div className="fixed bottom-0 w-full max-w-md px-4 bg-white rounded-t-xl shadow-md z-50">
           <div className="flex flex-col items-center py-4">
             <img
-              src={currentSong.image[2].link}
+              src={currentSong.image[2].link || musicPng}
               alt="Album Art"
               className="w-72 h-72 rounded-lg shadow-lg"
             />
