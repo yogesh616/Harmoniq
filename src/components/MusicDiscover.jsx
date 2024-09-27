@@ -436,7 +436,7 @@ useEffect(() => {
             )}
             </div>
             {/* Artist Drawer */}
-            <div>
+            <div className='w-full'>
             <div className={`app-drawer z-50 ${isArtistOpen ? 'open' : ''}`}>
       <span className='backButton ' onClick={toggleArtistDrawer}><i className="fa-solid fa-chevron-down"></i></span>
       
@@ -452,7 +452,7 @@ useEffect(() => {
       <div className="drawer-handle " onClick={toggleArtistDrawer}>
         <span className="handle-bar"></span>
       </div>
-      <div className="app-list manualWidth">
+      <div className="app-list">
         <h2>Heart Beats</h2>
         <ul className='song-list'>
           {artistSongs.length > 0 ? artistSongs.map((song, index) => (
@@ -547,7 +547,7 @@ useEffect(() => {
   </div>
 
   {/* Song List */}
-  <div className='app-list manualWidth'>
+  <div className='app-list'>
    
     <ul className='song-list'>
     
@@ -616,7 +616,7 @@ useEffect(() => {
               >
                 {isPlaying ? <FaPause /> : <FaPlay />}
               </button>
-              <span onClick={(e) => { e.stopPropagation(); handleFavorite(currentSong); }}>
+              <span className='cursor-pointer' onClick={(e) => { e.stopPropagation(); handleFavorite(currentSong); }}>
                           {isSongFavorite(currentSong.id) ? <FaHeartSolid color="red" /> : <FaHeartRegular />}
                         </span>
               <button
