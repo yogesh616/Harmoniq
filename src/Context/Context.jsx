@@ -1,5 +1,5 @@
 // Context.jsx
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useRef } from 'react';
 
 
 const PlayerContext = createContext();
@@ -705,6 +705,7 @@ const TopArtists = [
 const [isOpen, setIsOpen] = useState(false);
 const [isArtistOpen, setIsArtistOpen] = useState(false)
 const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+const audioRef = useRef(new Audio());
 
 const toggleArtistDrawer = () => {
   setIsArtistOpen(!isArtistOpen)
@@ -718,23 +719,35 @@ const toggleDrawer = () => {
 };
 
   
-  const playSong = (song) => {
-    setIsPlaying(false);
-    setCurrentSong(song);
+const playSong = (song) => {
+  // Pause the current song
+  audioRef.current.pause();
 
-    
-    setTimeout(() => {
-      setIsPlaying(true);
-    }, 0);
-  };
+  // Set the new song's src directly from the song passed in
+  audioRef.current.src = song.downloadUrl;
+  audioRef.current.currentTime = 0;
+
+  // Update the current song in the state
+  setCurrentSong(song);
+
+  // Start playing the song
+  audioRef.current.play();
+  setIsPlaying(true);
+};
+
 
  
-  const togglePlayPause = () => {
-    setIsPlaying(prev => !prev);
-  };
+const togglePlayPause = () => {
+  if (isPlaying) {
+    audioRef.current.pause();  // Pause the audio
+  } else {
+    audioRef.current.play();   // Play the audio
+  }
+  setIsPlaying(prev => !prev);  // Toggle isPlaying state
+};
 
   return (
-    <PlayerContext.Provider value={{ isPlaying, togglePlayPause, playSong, currentSong, setIsPlaying, Latest, TopArtists, isOpen, toggleDrawer, isArtistOpen, isCategoryOpen, toggleArtistDrawer, toggleCategoryDrawer}}>
+    <PlayerContext.Provider value={{ audioRef, isPlaying, togglePlayPause, playSong, currentSong, setIsPlaying, Latest, TopArtists, isOpen, toggleDrawer, isArtistOpen, isCategoryOpen, toggleArtistDrawer, toggleCategoryDrawer}}>
       {children}
     </PlayerContext.Provider>
   );

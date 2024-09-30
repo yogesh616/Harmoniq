@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FaTimes, FaPlay, FaPause, FaHeadphones, FaHeart as FaHeartRegular, FaHeart as FaHeartSolid} from 'react-icons/fa';
+import { MdOutlineVolumeOff, MdOutlineVolumeUp } from "react-icons/md";
 import { usePlayer } from '../Context/Context';
 import Loader from './Loader';
 import './player.css'
@@ -17,14 +18,36 @@ const MusicDiscover = () => {
   const [artistSongs, setArtistSongs] = useState([]);
   const [isPlayerVisible, setIsPlayerVisible] = useState(false);
   const [currentSong, setCurrentSong] = useState(null);
-  const { isPlaying, setIsPlaying, playSong, Latest, isOpen, toggleDrawer, TopArtists, isArtistOpen, toggleArtistDrawer, isCategoryOpen, toggleCategoryDrawer } = usePlayer();
+  const {audioRef, isPlaying, setIsPlaying, playSong, Latest, isOpen, toggleDrawer, TopArtists, isArtistOpen, toggleArtistDrawer, isCategoryOpen, toggleCategoryDrawer } = usePlayer();
   const [isLoading, setIsLoading] = useState(false);
-  const audioRef = useRef(new Audio());
+   const [progress, setProgress] = useState(0)
   const [category, setCategory] = useState('hindi');
   const [categoryData, setCategoryData] = useState([]);
   const [CategorySongs, setCategorySongs] = useState([]);
+  const [isMuted, setIsMuted] = useState(false);
 
+  const handleMuteToggle = () => {
+    setIsMuted(prev => {
+        audioRef.current.muted = !prev; // Set the muted value based on the updated state
+        return !prev;
+    });
+}
+useEffect(() => {
+  const handleEnded = () => {
+    setIsPlaying(false);
+    // Additional logic like playing the next song could go here
+   // setIsPlaying(true);
+   audioRef.current.play();
+    setIsPlaying(true);
+  };
 
+  audioRef.current.addEventListener('ended', handleEnded);
+
+  // Cleanup event listener on component unmount
+  return () => {
+    audioRef.current.removeEventListener('ended', handleEnded);
+  };
+}, [audioRef.current]);
 
 
 
@@ -34,44 +57,65 @@ const MusicDiscover = () => {
   }, [searchQuery]);
 
   useEffect(() => {
-    if (isPlaying && currentSong) {
-      audioRef.current.src = currentSong.downloadUrl[3].link;
-      audioRef.current.play().catch((error) => console.error('Error playing audio:', error));
-    } else {
-      audioRef.current.pause();
-    }
-  }, [isPlaying, currentSong]);
-
-  useEffect(() => {
-    const handleTimeUpdate = () => {
-      const progress = (audioRef.current.currentTime / audioRef.current.duration) * 100 || 0;
-      setProgress(progress);
+    const handleEnded = () => {
+      setIsPlaying(false);
+      // Additional logic like playing the next song could go here
+     // setIsPlaying(true);
+     audioRef.current.play();
+      setIsPlaying(true);
     };
-
-    audioRef.current.addEventListener('timeupdate', handleTimeUpdate);
-
+  
+    audioRef.current.addEventListener('ended', handleEnded);
+  
+    // Cleanup event listener on component unmount
     return () => {
-      audioRef.current.removeEventListener('timeupdate', handleTimeUpdate);
+      audioRef.current.removeEventListener('ended', handleEnded);
     };
-  }, [currentSong]);
-
-  const [progress, setProgress] = useState(0);
-
-  const handleSongClick = (song) => {
-    setCurrentSong({
-      name: song.name,
-      primaryArtists: song.primaryArtists,
-      image: song.image,
-      downloadUrl: song.downloadUrl,
-      id: song.id,
-      album: song.album,
-
-    });
-    playSong();
-    setIsPlayerVisible(true);
+  }, [audioRef.current]);
+  
+  
+    useEffect(() => {
+      getData();
+      setActiveTab('Songs')
+    }, [searchQuery]);
+  
+    useEffect(() => {
+      if (isPlaying && currentSong) {
+        audioRef.current.src = currentSong.downloadUrl;
+        audioRef.current.play().catch((error) => console.error('Error playing audio:', error));
+      } else {
+        audioRef.current.pause();
+      }
+    }, [isPlaying, currentSong]);
+  
+    useEffect(() => {
+      const handleTimeUpdate = () => {
+        const progress = (audioRef.current.currentTime / audioRef.current.duration) * 100 || 0;
+        setProgress(progress);
+      };
+  
+      audioRef.current.addEventListener('timeupdate', handleTimeUpdate);
+  
+      return () => {
+        audioRef.current.removeEventListener('timeupdate', handleTimeUpdate);
+      };
+    }, [currentSong]);
+  
+   
+  
+    const handleSongClick = (song) => {
+      const formattedSong = {
+        title: song.name,
+        name: song.primaryArtists,
+        albumArt: song.image[2].link,
+        downloadUrl: song.downloadUrl[3].link,  // Ensure this link exists
+      };
     
-  };
-
+      setCurrentSong(formattedSong);  // Set the new song
+      playSong(formattedSong);  // Start playing the song
+      setIsPlayerVisible(true);  // Show the player UI
+    };
+    
   async function getData() {
     try {
       const response  = await axios.get(`https://jiosaavn-api-privatecvc2.vercel.app/search/songs?query=${searchQuery}&limit=20&page=1`);
@@ -600,25 +644,17 @@ useEffect(() => {
 
       {/* Player Component */}
       {isPlayerVisible && currentSong && (
-        <div className="fixed bottom-0 w-full max-w-md px-4 bg-white rounded-t-xl shadow-md z-50">
+        <div className="fixed bottom-0 w-full max-w-md px-4 bg-white rounded-t-xl shadow-md ">
           <div className="flex flex-col items-center py-4">
             <img
-              src={currentSong.image[2].link || musicPng}
+              src={currentSong.albumArt}
               alt="Album Art"
               className="w-72 h-72 rounded-lg shadow-lg"
             />
             <h3 className="text-2xl font-bold">{currentSong.title}</h3>
             <p className="text-gray-500">{currentSong.name}</p>
             <div className="flex justify-between w-full mt-4">
-              <button style={{paddingLeft: '12px'}}
-                onClick={() => setIsPlaying(!isPlaying)}
-                className="w-10 h-10  rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700"
-              >
-                {isPlaying ? <FaPause /> : <FaPlay />}
-              </button>
-              <span className='cursor-pointer' onClick={(e) => { e.stopPropagation(); handleFavorite(currentSong); }}>
-                          {isSongFavorite(currentSong.id) ? <FaHeartSolid color="red" /> : <FaHeartRegular />}
-                        </span>
+             
               <button
                 onClick={() => {
                   setIsPlayerVisible(false);
@@ -628,6 +664,29 @@ useEffect(() => {
               >
                 <i className="fa-solid fa-hand"></i>
               </button>
+
+              <button style={{paddingLeft: '12px'}}
+                onClick={() => setIsPlaying(!isPlaying)}
+                className="w-10 h-10  rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700"
+              >
+                {isPlaying ? <FaPause /> : <FaPlay />}
+              </button>
+
+              { /* volume button */}
+              <button style={{paddingLeft: '12px'}}
+                onClick={ handleMuteToggle}
+                className="w-10 h-10  rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700"
+              >
+                {isMuted ? <MdOutlineVolumeOff /> : <MdOutlineVolumeUp />}
+              </button>
+              
+              
+              
+
+            
+
+
+
             </div>
             <label className=''>
             <input
