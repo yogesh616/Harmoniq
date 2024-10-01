@@ -26,6 +26,8 @@ const MusicDiscover = () => {
   const [CategorySongs, setCategorySongs] = useState([]);
   const [isMuted, setIsMuted] = useState(false);
 
+  
+
   const handleMuteToggle = () => {
     setIsMuted(prev => {
         audioRef.current.muted = !prev; // Set the muted value based on the updated state
@@ -244,12 +246,27 @@ useEffect(() => {
 
 
 
-
-
   return (
     <div className="flex flex-col items-center justify-between min-h-screen px-4 py-6 bg-gray-50">
       <div className="w-full max-w-md">
-        <h1 className="text-3xl font-bold logo">Syncy </h1>
+      <div className="one">
+  <div className="two">
+    <a href='/' className='logo cursor-pointer'>Syncy</a>
+    <div className="words">
+      <span className="word">beats</span>
+      <span className="word">melodies</span>
+      <span className="word">tracks</span>
+      <span className="word">albums</span>
+      <span className="word">playlists</span>
+      <span className="word">songs</span>
+      <span className="word">artists</span>
+      <span className="word">vibes</span>
+      <span className="word">genres</span>
+      <span className="word">remixes</span>
+    </div>
+  </div>
+</div>
+
         <div className="flex items-center mt-4 mb-8 bg-gray-100 rounded-full">
           <FaTimes onClick={handleSearch} className="w-5 h-5 ml-3 text-gray-500 cursor-pointer" />
           <input
@@ -519,7 +536,10 @@ useEffect(() => {
                    <span className="text-sm text-gray-400">
                      {song.formattedDuration}
                    </span> &nbsp; &nbsp; &nbsp; &nbsp;
-                  
+                  {/* add to favorite */}
+                  <span onClick={(e) => { e.stopPropagation(); handleFavorite(song); }}>
+                          {isSongFavorite(song.id) ? <FaHeartSolid color="red" /> : <FaHeartRegular />}
+                        </span>
                  </p>
                </div>
              </div>
@@ -612,6 +632,9 @@ useEffect(() => {
                 <p className="text-sm text-gray-500">
                   {song.primaryArtists} &nbsp; &nbsp;
                   <span className="text-sm text-gray-400">{song.formattedDuration}</span>
+                  <span onClick={(e) => { e.stopPropagation(); handleFavorite(song); }}>
+                          {isSongFavorite(song.id) ? <FaHeartSolid color="red" /> : <FaHeartRegular />}
+                        </span>
                 </p>
               </div>
             </div>
@@ -653,6 +676,8 @@ useEffect(() => {
             />
             <h3 className="text-2xl font-bold">{currentSong.title}</h3>
             <p className="text-gray-500">{currentSong.name}</p>
+            
+            
             <div className="flex justify-between w-full mt-4">
              
               <button
