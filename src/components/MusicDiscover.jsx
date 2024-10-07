@@ -345,6 +345,7 @@ const stopPlayback = () => {
       <div className="one">
   <div className="two">
     <a href='/' className='logo cursor-pointer'>Syncy</a>
+    
     <button
           onClick={() => setDarkMode(!darkMode)}
           className="rounded px-4 py-2 text-sm font-medium text-white bg-indigo-600  dark:bg-slate-800 dark:text-yellow-400 transition-all duration-300"
@@ -363,6 +364,8 @@ const stopPlayback = () => {
       <span className="word">genres</span>
       <span className="word">remixes</span>
     </div>
+    { currentSong && <div onClick={()=> setIsPlayerVisible(!isPlayerVisible)} className=' player-btn px-4 py-2 text-sm font-medium text-white bg-indigo-600'><i  className="fa-solid fa-headphones cursor-pointer"></i>
+    </div>}
   </div>
 </div>
 
