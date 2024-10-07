@@ -8,6 +8,10 @@ import TopArtist from './TopArtist';
 import AppDrawer from './AppDrawer';
 import axios from 'axios';
 import musicPng from '../assets/music.png'
+import './flip.css';
+import * as Tone from "tone";
+
+
 const MusicDiscover = () => {
   const [searchQuery, setSearchQuery] = useState('mitraz');
   const [songs, setSongs] = useState([]);
@@ -25,8 +29,38 @@ const MusicDiscover = () => {
   const [categoryData, setCategoryData] = useState([]);
   const [CategorySongs, setCategorySongs] = useState([]);
   const [isMuted, setIsMuted] = useState(false);
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [bass, setBass] = useState(0);    // Low frequencies
+  const [mid, setMid] = useState(0);      // Mid frequencies
+  const [treble, setTreble] = useState(0);
+  const [player, setPlayer] = useState(null);
+  const [eq, setEq] = useState(null);
+  const [songUrl, setSongUrl] = useState(null);
 
-  
+  // implimenting dark mode
+  const [darkMode, setDarkMode] = useState(() => {
+    // Check localStorage to see if dark mode is already enabled
+    const savedMode = localStorage.getItem('dark-mode');
+    return savedMode === 'true' || false;
+  });
+
+  // Toggle dark mode class on the root html element
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    // Save the user's preference in localStorage
+    localStorage.setItem('dark-mode', darkMode);
+  }, [darkMode]);
+
+    const reset = () => {
+      setBass(0);
+      setMid(0);
+      setTreble(0);
+      stopPlayback()
+    }
 
   const handleMuteToggle = () => {
     setIsMuted(prev => {
@@ -116,6 +150,7 @@ useEffect(() => {
       setCurrentSong(formattedSong);  // Set the new song
       playSong(formattedSong);  // Start playing the song
       setIsPlayerVisible(true);  // Show the player UI
+      setSongUrl(formattedSong.downloadUrl);
     };
     
   async function getData() {
@@ -152,6 +187,7 @@ useEffect(() => {
       });
       playSong();
       setIsPlaying(true);
+
     }
   };
 
@@ -176,6 +212,7 @@ useEffect(() => {
   if (currentSong) {
     const isSongFavorite = favorite.some(fav => fav.id === currentSong.id);
     setIsFavorite(isSongFavorite);
+    setSongUrl(currentSong.downloadUrl)
   }
 }, [currentSong, favorite]);
 
@@ -239,19 +276,81 @@ async function getCategorySongs(id) {
     console.error('Error fetching category songs:', error);
   }
 }
-
+ 
 useEffect(() => {
   handleCategories('hindi');
 }, [])
 
 
+useEffect(() => {
+  if (songUrl) {
+    // Dispose of the previous player if it exists
+    if (player) {
+      player.dispose();
+    }
+
+    // Create a new Tone.Player for the new song URL
+    const newPlayer = new Tone.Player({
+      url: songUrl,
+      autostart: false,  // Start playback manually
+    }).toDestination();
+
+    // Create a new EQ3 for bass, mid, and treble
+    const newEq = new Tone.EQ3({
+      low: bass,
+      mid: mid,
+      high: treble,
+    }).toDestination();
+
+    // Connect the player to the EQ and set up state
+    newPlayer.connect(newEq);
+    setPlayer(newPlayer);
+    setEq(newEq);
+
+    // Cleanup on unmount or URL change
+    return () => {
+      newPlayer.dispose();
+      newEq.dispose();
+    };
+  }
+}, [songUrl]);
+ 
+useEffect(() => {
+  if (eq) {
+    eq.low.value = bass;
+    eq.mid.value = mid;
+    eq.high.value = treble;
+  }
+}, [bass, mid, treble, eq]);
+
+// Start playback when a song is played
+const startPlayback = async () => {
+  await Tone.start();
+  player.start();  // Ensure the new player is used here
+  setIsPlaying(true);
+};
+
+// Stop playback
+const stopPlayback = () => {
+  if (player) {
+    player.stop();
+    setIsPlaying(false);
+  }
+};
+
 
   return (
-    <div className="flex flex-col items-center justify-between min-h-screen px-4 py-6 bg-gray-50">
+    <div className="flex flex-col items-center justify-between min-h-screen px-4 py-6 bg-gray-50 dark:text-slate-400 dark:bg-zinc-900">
       <div className="w-full max-w-md">
       <div className="one">
   <div className="two">
     <a href='/' className='logo cursor-pointer'>Syncy</a>
+    <button
+          onClick={() => setDarkMode(!darkMode)}
+          className="rounded px-4 py-2 text-sm font-medium text-white bg-indigo-600  dark:bg-slate-800 dark:text-yellow-400 transition-all duration-300"
+        >
+          {darkMode ? (<i className="fa-regular fa-sun"></i>) : (<i className="fa-solid fa-moon"></i>)}
+        </button>
     <div className="words">
       <span className="word">beats</span>
       <span className="word">melodies</span>
@@ -267,7 +366,7 @@ useEffect(() => {
   </div>
 </div>
 
-        <div className="flex items-center mt-4 mb-8 bg-gray-100 rounded-full">
+        <div className="flex items-center mt-4 mb-8 bg-gray-100 rounded-full dark:text-slate-400 dark:bg-zinc-900">
           <FaTimes onClick={handleSearch} className="w-5 h-5 ml-3 text-gray-500 cursor-pointer" />
           <input
             type="text"
@@ -278,7 +377,7 @@ useEffect(() => {
           />
           <FaHeadphones onClick={()=> setIsPlayerVisible(!isPlayerVisible)} className='cursor-pointer' />
         </div>
-        <div className="flex items-center justify-between w-full pb-2 mb-4 text-sm font-semibold border-b overflow-x-auto">
+        <div className="flex items-center justify-between w-full pb-2 mb-4 text-sm font-semibold border-b overflow-x-auto dark:text-slate-400 dark:bg-zinc-900">
           <span
             onClick={() =>{ setActiveTab('Songs'); setIsPlayerVisible(false)} }
             className={`cursor-pointer ${activeTab === 'Songs' ? 'border-b-2 border-yellow-400' : 'text-gray-400 hover:text-gray-800'}`}
@@ -307,7 +406,7 @@ useEffect(() => {
           
         </div>
         {activeTab === 'Songs' && (
-          <div className="mb-12">
+          <div className="mb-12 ">
             <h3 className="mb-4 text-lg font-semibold">Latest Songs</h3>
             <div className="overflow-x-auto">
   <div className="flex gap-4 mb-10">
@@ -332,11 +431,11 @@ useEffect(() => {
     )) : <Loader />}
   </div>
 </div>
-            <ul className="space-y-4">
+            <ul className="space-y-4 ">
               {songs.length > 0 ? songs.map((song, index) => (
                 <li
                   key={index}
-                  className="flex items-center justify-between p-2 bg-white rounded-lg shadow "
+                  className="flex items-center justify-between p-2 bg-white rounded-lg shadow dark:text-slate-400 dark:bg-zinc-900 custom"
                   
                 >
                   <div className="flex items-center" >
@@ -353,7 +452,7 @@ useEffect(() => {
                         <span className="text-sm text-gray-400">
                           {song.formattedDuration}
                         </span> &nbsp; &nbsp; &nbsp; &nbsp;
-                        <span onClick={(e) => { e.stopPropagation(); handleFavorite(song); }}>
+                        <span className='cursor-pointer' onClick={(e) => { e.stopPropagation(); handleFavorite(song); }}>
                           {isSongFavorite(song.id) ? <FaHeartSolid color="red" /> : <FaHeartRegular />}
                         </span>
 
@@ -377,7 +476,7 @@ useEffect(() => {
             <div className="overflow-x-auto">
   <div className="flex gap-4 mb-10">
     {Latest.length > 0 ? Latest.map((song, index) => (
-      <div key={index} className="min-w-[200px]">
+      <div key={index} className="min-w-[200px] ">
         <div className="relative cursor-pointer" onClick={() => handleSongClick(song)}>
           <img
             src={song.image[2].link}
@@ -406,7 +505,7 @@ useEffect(() => {
             <svg className="animate-bounce w-6 h-6 ...">
   
 </svg>
-            <div className={`app-drawer ${isOpen ? 'open' : ''}`}>
+            <div className={`app-drawer dark:text-slate-400 dark:bg-zinc-900 ${isOpen ? 'open' : ''}`}>
       <span className='backButton ' onClick={toggleDrawer}><i className="fa-solid fa-chevron-down"></i></span>
       
 <button className="button hidden" onClick={toggleDrawer}>
@@ -422,12 +521,12 @@ useEffect(() => {
         <span className="handle-bar"></span>
       </div>
       <div className="app-list">
-        <h2 className='heart-beat'>Heart Beats</h2>
+        <h2 className='heart-beat dark:text-slate-400 dark:bg-zinc-900'>Heart Beats</h2>
         <ul className='song-list'>
           {favorite.length > 0 ? favorite.map((song, index) => (
              <li
              key={index}
-             className="flex items-center justify-between p-2 bg-white rounded-lg shadow cursor-pointer"
+             className="flex items-center justify-between p-2 bg-white rounded-lg shadow cursor-pointer dark:text-slate-400 dark:bg-zinc-900"
              
            >
              <div className="flex items-center" onClick={() => handleSongClick(song)}>
@@ -498,7 +597,7 @@ useEffect(() => {
             </div>
             {/* Artist Drawer */}
             <div className='w-full'>
-            <div className={`app-drawer z-50 ${isArtistOpen ? 'open' : ''}`}>
+            <div className={`app-drawer z-50 dark:text-slate-400 dark:bg-zinc-900 ${isArtistOpen ? 'open' : ''}`}>
       <span className='backButton ' onClick={toggleArtistDrawer}><i className="fa-solid fa-chevron-down"></i></span>
       
 <button className="button hidden" onClick={toggleArtistDrawer}>
@@ -519,7 +618,7 @@ useEffect(() => {
           {artistSongs.length > 0 ? artistSongs.map((song, index) => (
              <li
              key={index}
-             className="flex items-center justify-between p-2 bg-white rounded-lg shadow cursor-pointer"
+             className="flex items-center justify-between p-2 bg-white rounded-lg shadow cursor-pointer dark:text-slate-400 dark:bg-zinc-900"
              
            >
              <div className="flex items-center" onClick={() => handleSongClick(song)}>
@@ -537,7 +636,7 @@ useEffect(() => {
                      {song.formattedDuration}
                    </span> &nbsp; &nbsp; &nbsp; &nbsp;
                   {/* add to favorite */}
-                  <span onClick={(e) => { e.stopPropagation(); handleFavorite(song); }}>
+                  <span className='cursor-pointer' onClick={(e) => { e.stopPropagation(); handleFavorite(song); }}>
                           {isSongFavorite(song.id) ? <FaHeartSolid color="red" /> : <FaHeartRegular />}
                         </span>
                  </p>
@@ -592,7 +691,7 @@ useEffect(() => {
                             <span className='mt-2 text-sm font-semibold text-center'  >{chart.title}</span>
                         </div>
                     ))}
-        <div className={`app-drawer z-50 ${isCategoryOpen ? 'open' : ''}`}>
+        <div className={`app-drawer z-50 dark:text-slate-400 dark:bg-zinc-900 ${isCategoryOpen ? 'open' : ''}`}>
   {/* Back Button */}
   <span className='backButton' onClick={toggleCategoryDrawer}>
     <i className="fa-solid fa-chevron-down"></i>
@@ -619,7 +718,7 @@ useEffect(() => {
         CategorySongs.map((song, index) => (
           <li
             key={index}
-            className="flex items-center justify-between p-2 bg-white rounded-lg shadow cursor-pointer"
+            className="flex items-center justify-between p-2 bg-white rounded-lg shadow cursor-pointer dark:text-slate-400 dark:bg-zinc-900"
           >
             <div className="flex items-center" onClick={() => handleSongClick(song)}>
               <img
@@ -667,53 +766,84 @@ useEffect(() => {
 
       {/* Player Component */}
       {isPlayerVisible && currentSong && (
-        <div className="fixed bottom-0 w-full max-w-md px-4 bg-white rounded-t-xl shadow-md ">
-          <div className="flex flex-col items-center py-4">
-            <img
-              src={currentSong.albumArt}
-              alt="Album Art"
-              className="w-72 h-72 rounded-lg shadow-lg"
-            />
-            <h3 className="text-2xl font-bold">{currentSong.title}</h3>
-            <p className="text-gray-500">{currentSong.name}</p>
-            
-            
-            <div className="flex justify-between w-full mt-4">
-             
-              <button
-                onClick={() => {
-                  setIsPlayerVisible(false);
-                  { /* setIsPlaying(false); */}
-                }}
-                className="w-10 ps-1 h-10 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700 ml-2"
+        <div className="fixed bottom-0 w-full max-w-md px-4 bg-white rounded-t-xl shadow-md dark:text-slate-400 dark:bg-zinc-900">
+        <div className="flex flex-col items-center py-4">
+          <div className="flip-card w-72 h-72 rounded-lg shadow-lg">
+            <div
+              className={`flip-card-inner w-72 h-72 rounded-lg shadow-lg ${
+                isFlipped ? "rotate" : "rotate-back"
+              }`}
+            >
+              {/* Front of the flip card */}
+              <div
+                className="flip-card-front w-72 h-72 rounded-lg shadow-lg"
+                onClick={() => setIsFlipped(true)}
               >
-                <i className="fa-solid fa-hand"></i>
-              </button>
-
-              <button style={{paddingLeft: '12px'}}
-                onClick={() => setIsPlaying(!isPlaying)}
-                className="w-10 h-10  rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700"
-              >
-                {isPlaying ? <FaPause /> : <FaPlay />}
-              </button>
-
-              { /* volume button */}
-              <button style={{paddingLeft: '12px'}}
-                onClick={ handleMuteToggle}
-                className="w-10 h-10  rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700"
-              >
-                {isMuted ? <MdOutlineVolumeOff /> : <MdOutlineVolumeUp />}
-              </button>
-              
-              
-              
-
-            
-
-
-
+                <img
+                  src={currentSong.albumArt}
+                  alt="Album Art"
+                  className="w-100 h-100 rounded-lg shadow-lg img cursor-pointer"
+                />
+              </div>
+  
+              {/* Back of the flip card */}
+              <div className="flip-card-back w-72 h-72 rounded-lg shadow-lg">
+                <button onClick={reset} className='bg-slate-700 px-2 py-1 my-2 rounded-lg'>Reset</button>
+              <div className="flex  items-center justify-center  w-70 h-1/3 z-20">
+               <div className="Slider">
+	               <input className="level" type="range" min="-40" max="10" value={bass} onChange={(e) => setBass(Number(e.target.value))}   />
+               </div>
+               <div className="Slider">
+	               <input className="level" type="range" min="-40" max="10" value={mid} onChange={(e) => setMid(Number(e.target.value))}  />
+               </div>
+               <div className="Slider">
+	               <input className="level" type="range" min="-40" max="10" value={treble} onChange={(e) => setTreble(Number(e.target.value))}  />
+               </div>
+              </div>
+                {/* Back Button to flip the card back to the front */}
+                <button
+                  onClick={() => setIsFlipped(false)}
+                  className="mt-4 px-4 py-2 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700"
+                >
+                  Back to Front
+                </button>
+              </div>
             </div>
-            <label className=''>
+          </div>
+  
+          {/* Song details */}
+          <h3 className="text-2xl font-bold">{currentSong.title}</h3>
+          <p className="text-gray-500">{currentSong.name}</p>
+  
+          {/* Controls */}
+          <div className="flex justify-between w-full mt-4">
+            <button
+              onClick={() => setIsPlayerVisible(false)}
+              className="w-10 h-10 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700 ml-2"
+            >
+              <i className="fa-solid fa-hand"></i>
+            </button>
+  
+            <button
+              style={{ paddingLeft: "12px" }}
+              onClick={() => setIsPlaying(!isPlaying)}
+              className="w-10 h-10 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700"
+            >
+              {isPlaying ? <FaPause /> : <FaPlay />}
+            </button>
+  
+            {/* Volume button */}
+            <button
+              style={{ paddingLeft: "12px" }}
+              onClick={handleMuteToggle}
+              className="w-10 h-10 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700"
+            >
+              {isMuted ? <MdOutlineVolumeOff /> : <MdOutlineVolumeUp />}
+            </button>
+          </div>
+  
+          {/* Progress bar */}
+          <label className="w-full">
             <input
               type="range"
               min="0"
@@ -724,11 +854,10 @@ useEffect(() => {
               style={{
                 background: `linear-gradient(to right, #fad0c4 ${progress}%, #e5e7eb ${progress}%)`,
               }}
-            
             />
-            </label>
-          </div>
+          </label>
         </div>
+      </div>
       )}
     </div>
   );

@@ -82,7 +82,7 @@ const AudioPlayer = () => {
         <button onClick={reset}>Reset</button>
       </div>
 
-    <div className="flex  items-center justify-center bg-zinc-700 w-full h-full">
+    <div className="flex  items-center justify-center bg-zinc-700 w-80 h-1/3">
       <div className="Slider">
 	         <input className="level" type="range" min="-40" max="10"   value={bass} onChange={(e) => setBass(Number(e.target.value))} />
       </div>

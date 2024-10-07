@@ -191,10 +191,11 @@
 
 .heart-beat{
 background: #B5E4FC;
-background: linear-gradient(135deg, #B5E4FC, #5259BF);
+
 border-radius: 15px;
 padding: 5px;
 padding-left: 15px;
+margin-bottom: 0.8rem;
 }
 
 
