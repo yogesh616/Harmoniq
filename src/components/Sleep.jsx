@@ -16,6 +16,8 @@ function Sleep() {
       const timer = setTimeout(() => {
         setIsPlaying(false)
         setRemainingTime(0)
+        setTime(0)
+        setRangeValue(1)
       }, time)
 
       // Start countdown
@@ -95,7 +97,7 @@ function Sleep() {
                 <input
                   type="range"
                   id="sleep-time"
-                  min="1" // Minimum value is 1 minute
+                  min="0" // Minimum value is 1 minute
                   max="60" // Maximum value is 160 minutes
                   value={rangeValue} // Bind rangeValue to the input
                   onChange={(e) => setRangeValue(Number(e.target.value))} // Update rangeValue state
