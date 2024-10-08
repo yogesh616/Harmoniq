@@ -22,7 +22,7 @@ const MusicDiscover = () => {
   const [artistSongs, setArtistSongs] = useState([]);
   const [isPlayerVisible, setIsPlayerVisible] = useState(false);
   const [currentSong, setCurrentSong] = useState(null);
-  const {audioRef, isPlaying, setIsPlaying, playSong, Latest, isOpen, toggleDrawer, TopArtists, isArtistOpen, toggleArtistDrawer, isCategoryOpen, toggleCategoryDrawer } = usePlayer();
+  const {musicDuration, currentTime, setMusicDuration, setCurrentTime,  audioRef, isPlaying, setIsPlaying, playSong, Latest, isOpen, toggleDrawer, TopArtists, isArtistOpen, toggleArtistDrawer, isCategoryOpen, toggleCategoryDrawer } = usePlayer();
   const [isLoading, setIsLoading] = useState(false);
    const [progress, setProgress] = useState(0)
   const [category, setCategory] = useState('hindi');
@@ -84,6 +84,39 @@ useEffect(() => {
     audioRef.current.removeEventListener('ended', handleEnded);
   };
 }, [audioRef.current]);
+
+
+useEffect(() => {
+  const handleLoadedMetadata = () => {
+    setMusicDuration(audioRef.current.duration);  // Set the total duration
+  };
+
+  audioRef.current.addEventListener('loadedmetadata', handleLoadedMetadata);
+
+  return () => {
+    audioRef.current.removeEventListener('loadedmetadata', handleLoadedMetadata);
+  };
+}, [audioRef.current]);
+
+useEffect(() => {
+  const handleTimeUpdate = () => {
+    setCurrentTime(audioRef.current.currentTime);  // Update the played time
+  };
+
+  audioRef.current.addEventListener('timeupdate', handleTimeUpdate);
+
+  return () => {
+    audioRef.current.removeEventListener('timeupdate', handleTimeUpdate);
+  };
+}, [audioRef.current]);
+
+
+const formatTime = (time) => {
+  const minutes = Math.floor(time / 60);
+  const seconds = Math.floor(time % 60);
+  return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+};
+
 
 
 
@@ -348,7 +381,7 @@ const stopPlayback = () => {
     
     <button
           onClick={() => setDarkMode(!darkMode)}
-          className="rounded px-4 py-2 text-sm font-medium text-white bg-indigo-600  dark:bg-slate-800 dark:text-yellow-400 transition-all duration-300"
+          className="border-0 rounded px-4 py-2 text-sm font-medium text-white bg-indigo-600  dark:bg-slate-800 dark:text-yellow-400 transition-all duration-300"
         >
           {darkMode ? (<i className="fa-regular fa-sun"></i>) : (<i className="fa-solid fa-moon"></i>)}
         </button>
@@ -364,7 +397,7 @@ const stopPlayback = () => {
       <span className="word">genres</span>
       <span className="word">remixes</span>
     </div>
-    { currentSong && <div onClick={()=> setIsPlayerVisible(!isPlayerVisible)} className=' player-btn px-4 py-2 text-sm font-medium text-white bg-indigo-600'><i  className="fa-solid fa-headphones cursor-pointer"></i>
+    { currentSong && <div onClick={()=> setIsPlayerVisible(!isPlayerVisible)} className='cursor-pointer border-0 player-btn px-4 py-2 text-sm font-medium text-white bg-indigo-600'><i  className="fa-solid fa-headphones cursor-pointer"></i>
     </div>}
   </div>
 </div>
@@ -846,19 +879,23 @@ const stopPlayback = () => {
           </div>
   
           {/* Progress bar */}
-          <label className="w-full">
+          
+          <label className="w-full flex mt-2 items-center justify-center gap-1 px-1">
+          <span className='currentTime'>{formatTime(currentTime)}</span>
             <input
               type="range"
               min="0"
               max="100"
               value={progress}
               onChange={handleProgressChange}
-              className="w-full h-1 bg-gray-200 rounded-lg appearance-none thumb cursor-pointer"
+              className="w-10/12 h-1 bg-gray-200 rounded-lg appearance-none thumb cursor-pointer"
               style={{
                 background: `linear-gradient(to right, #fad0c4 ${progress}%, #e5e7eb ${progress}%)`,
               }}
             />
+            <span className='musicDuration'>{formatTime(musicDuration)}</span>
           </label>
+          
         </div>
       </div>
       )}

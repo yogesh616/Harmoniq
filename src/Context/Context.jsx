@@ -706,6 +706,8 @@ const [isOpen, setIsOpen] = useState(false);
 const [isArtistOpen, setIsArtistOpen] = useState(false)
 const [isCategoryOpen, setIsCategoryOpen] = useState(false);
 const audioRef = useRef(new Audio());
+const [musicDuration, setMusicDuration] = useState(0);
+const [currentTime, setCurrentTime] = useState(0);
 
 const toggleArtistDrawer = () => {
   setIsArtistOpen(!isArtistOpen)
@@ -747,7 +749,7 @@ const togglePlayPause = () => {
 };
 
   return (
-    <PlayerContext.Provider value={{ audioRef, isPlaying, togglePlayPause, playSong, currentSong, setIsPlaying, Latest, TopArtists, isOpen, toggleDrawer, isArtistOpen, isCategoryOpen, toggleArtistDrawer, toggleCategoryDrawer}}>
+    <PlayerContext.Provider value={{ musicDuration, currentTime ,setMusicDuration, setCurrentTime,  audioRef, isPlaying, togglePlayPause, playSong, currentSong, setIsPlaying, Latest, TopArtists, isOpen, toggleDrawer, isArtistOpen, isCategoryOpen, toggleArtistDrawer, toggleCategoryDrawer}}>
       {children}
     </PlayerContext.Provider>
   );
