@@ -10,6 +10,12 @@ import axios from 'axios';
 import musicPng from '../assets/music.png'
 import './flip.css';
 import * as Tone from "tone";
+import Lottie from 'react-lottie'
+import person from '../assets/person.json'
+
+
+import box from '../assets/box.json'
+import Sleep from './Sleep';
 
 
 const MusicDiscover = () => {
@@ -37,6 +43,16 @@ const MusicDiscover = () => {
   const [eq, setEq] = useState(null);
   const [songUrl, setSongUrl] = useState(null);
 
+  
+
+  const defaultOptions = {
+    loop: true,
+    autoplay: true,
+    animationData: box,
+    rendererSettings: {
+      preserveAspectRatio: 'xMidYMid slice'
+    }
+  };
   // implimenting dark mode
   const [darkMode, setDarkMode] = useState(() => {
     // Check localStorage to see if dark mode is already enabled
@@ -374,6 +390,7 @@ const stopPlayback = () => {
 
   return (
     <div className="flex flex-col items-center justify-between min-h-screen px-4 py-6 bg-gray-50 dark:text-slate-400 dark:bg-zinc-900">
+     
       <div className="w-full max-w-md">
       <div className="one">
   <div className="two">
@@ -541,6 +558,8 @@ const stopPlayback = () => {
             <svg className="animate-bounce w-6 h-6 ...">
   
 </svg>
+  
+        
             <div className={`app-drawer dark:text-slate-400 dark:bg-zinc-900 ${isOpen ? 'open' : ''}`}>
       <span className='backButton ' onClick={toggleDrawer}><i className="fa-solid fa-chevron-down"></i></span>
       
@@ -551,6 +570,7 @@ const stopPlayback = () => {
     ></path>
   </svg>
 </button>
+
 
       
       <div className="drawer-handle" onClick={toggleDrawer}>
@@ -757,6 +777,7 @@ const stopPlayback = () => {
             className="flex items-center justify-between p-2 bg-white rounded-lg shadow cursor-pointer dark:text-slate-400 dark:bg-zinc-900"
           >
             <div className="flex items-center" onClick={() => handleSongClick(song)}>
+              
               <img
                 src={song.image[0].link}
                 alt={song.title}
@@ -815,6 +836,8 @@ const stopPlayback = () => {
                 className="flip-card-front w-72 h-72 rounded-lg shadow-lg"
                 onClick={() => setIsFlipped(true)}
               >
+               
+               
                 <img
                   src={currentSong.albumArt}
                   alt="Album Art"
@@ -848,6 +871,8 @@ const stopPlayback = () => {
           </div>
   
           {/* Song details */}
+          <Sleep />
+         
           <h3 className="text-2xl font-bold">{currentSong.title}</h3>
           <p className="text-gray-500">{currentSong.name}</p>
   
@@ -865,7 +890,7 @@ const stopPlayback = () => {
               onClick={() => setIsPlaying(!isPlaying)}
               className="w-10 h-10 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700"
             >
-              {isPlaying ? <FaPause /> : <FaPlay />}
+              {isPlaying ?   <FaPause /> : <FaPlay />}
             </button>
   
             {/* Volume button */}
