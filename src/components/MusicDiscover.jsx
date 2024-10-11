@@ -823,7 +823,7 @@ const stopPlayback = () => {
 
       {/* Player Component */}
       {isPlayerVisible && currentSong && (
-        <div className="fixed bottom-0 w-full max-w-md px-4 bg-white rounded-t-xl shadow-md dark:text-slate-400 dark:bg-zinc-900">
+        <div style={{zIndex: '1002'}} className="fixed bottom-0 w-full max-w-md px-4 bg-white rounded-t-xl shadow-md dark:text-slate-400 dark:bg-zinc-900">
         <div className="flex flex-col items-center py-4">
           <div className="flip-card w-72 h-72 rounded-lg shadow-lg">
             <div
