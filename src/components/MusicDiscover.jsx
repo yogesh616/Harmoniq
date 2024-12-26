@@ -386,9 +386,7 @@ const stopPlayback = () => {
     setIsPlaying(false);
   }
 };
-useEffect(() => {
-  console.log(currentSong)
-}, [currentSong])
+
 
 const handleDownload = (song) => {
   const fileUrl = song.downloadUrl;
