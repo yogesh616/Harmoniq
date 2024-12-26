@@ -448,6 +448,7 @@ const handleDownload = (song) => {
           <input
             type="text"
             value={searchQuery}
+		  onFocus={() => setIsPlayerVisible(!isPlayerVisible)}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search"
             className="w-full py-2 pl-4 pr-4 text-sm bg-gray-100 rounded-full focus:outline-none"
