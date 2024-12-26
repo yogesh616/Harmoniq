@@ -59,10 +59,10 @@ const storedFavorites = localStorage.getItem('favoriteSongs');
                </div>
              </div>
              <button
-                onClick={() => togglePlayPause(song.downloadUrl[3].link)}
+                onClick={() => togglePlayPause(song.downloadUrl[2].link)}
                 className="text-gray-400 cursor-pointer"
               >
-                {isPlaying && currentSong?.downloadUrl[3].link === song.downloadUrl[3].link ? <FaPause /> : <FaPlay />}
+                {isPlaying && currentSong?.downloadUrl[2].link === song.downloadUrl[2].link ? <FaPause /> : <FaPlay />}
               </button>
 
            </li>

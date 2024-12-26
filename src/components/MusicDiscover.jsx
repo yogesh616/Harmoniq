@@ -193,7 +193,7 @@ const formatTime = (time) => {
         title: song.name,
         name: song.primaryArtists,
         albumArt: song.image[2].link,
-        downloadUrl: song.downloadUrl[3].link,  // Ensure this link exists
+        downloadUrl: song.downloadUrl[2].link,  // Ensure this link exists
       };
     
       setCurrentSong(formattedSong);  // Set the new song
@@ -386,6 +386,30 @@ const stopPlayback = () => {
     setIsPlaying(false);
   }
 };
+useEffect(() => {
+  console.log(currentSong)
+}, [currentSong])
+
+const handleDownload = (song) => {
+  const fileUrl = song.downloadUrl;
+  
+
+  fetch(fileUrl)
+      .then(response => response.blob())
+      .then(blob => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = song.title; // Use the original file name
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+      })
+      .catch(err => console.error('Error downloading the file:', err));
+};
+
+
+
 
 
   return (
@@ -473,10 +497,10 @@ const stopPlayback = () => {
           />
           <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center w-full bg-gray-900 bg-opacity-50 h-9 rounded-b-lg">
             <button
-              onClick={() => togglePlayPause(song.downloadUrl[3].link)}
+              onClick={() => togglePlayPause(song.downloadUrl[2].link)}
               className="text-gray-400 cursor-pointer"
             >
-              {isPlaying && audioRef.current.src === song.downloadUrl[3].link ? <FaPause /> : <FaPlay />}
+              {isPlaying && audioRef.current.src === song.downloadUrl[2].link ? <FaPause /> : <FaPlay />}
             </button>
           </div>
         </div>
@@ -513,10 +537,10 @@ const stopPlayback = () => {
                     </div>
                   </div>
                   <button
-                    onClick={() => {togglePlayPause(song.downloadUrl[3].link), handleSongClick(song)}}
+                    onClick={() => {togglePlayPause(song.downloadUrl[2].link), handleSongClick(song)}}
                     className="text-gray-400 cursor-pointer"
                   >
-                    {isPlaying && audioRef.current.src === song.downloadUrl[3].link ? <FaPause /> : <FaPlay />}
+                    {isPlaying && audioRef.current.src === song.downloadUrl[2].link ? <FaPause /> : <FaPlay />}
                   </button>
                 </li>
               )) : <Loader />}
@@ -538,10 +562,10 @@ const stopPlayback = () => {
           />
           <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center w-full bg-gray-900 bg-opacity-50 h-9 rounded-b-lg">
             <button
-              onClick={() => togglePlayPause(song.downloadUrl[3].link)}
+              onClick={() => togglePlayPause(song.downloadUrl[2].link)}
               className="text-gray-400 cursor-pointer"
             >
-              {isPlaying && audioRef.current.src === song.downloadUrl[3].link ? <FaPause /> : <FaPlay />}
+              {isPlaying && audioRef.current.src === song.downloadUrl[2].link ? <FaPause /> : <FaPlay />}
             </button>
           </div>
         </div>
@@ -604,10 +628,10 @@ const stopPlayback = () => {
                </div>
              </div>
              <button
-                    onClick={() => togglePlayPause(song.downloadUrl[3].link)}
+                    onClick={() => togglePlayPause(song.downloadUrl[2].link)}
                     className="text-gray-400 cursor-pointer"
                   >
-                    {isPlaying && audioRef.current.src === song.downloadUrl[3].link ? <FaPause /> : <FaPlay />}
+                    {isPlaying && audioRef.current.src === song.downloadUrl[2].link ? <FaPause /> : <FaPlay />}
                   </button>
 
            </li>
@@ -699,10 +723,10 @@ const stopPlayback = () => {
                </div>
              </div>
              <button
-                    onClick={() => togglePlayPause(song.downloadUrl[3].link)}
+                    onClick={() => togglePlayPause(song.downloadUrl[2].link)}
                     className="text-gray-400 cursor-pointer"
                   >
-                    {isPlaying && audioRef.current.src === song.downloadUrl[3].link ? <FaPause /> : <FaPlay />}
+                    {isPlaying && audioRef.current.src === song.downloadUrl[2].link ? <FaPause /> : <FaPlay />}
                   </button>
 
            </li>
@@ -796,10 +820,10 @@ const stopPlayback = () => {
             </div>
 
             <button
-              onClick={() => togglePlayPause(song.downloadUrl[3].link)}
+              onClick={() => togglePlayPause(song.downloadUrl[2].link)}
               className="text-gray-400 cursor-pointer"
             >
-              {isPlaying && audioRef.current.src === song.downloadUrl[3].link ? (
+              {isPlaying && audioRef.current.src === song.downloadUrl[2].link ? (
                 <FaPause />
               ) : (
                 <FaPlay />
@@ -871,7 +895,11 @@ const stopPlayback = () => {
           </div>
   
           {/* Song details */}
-          <Sleep />
+        <div className='flex items-center justify-center w-2/3 m-1 mt-2'> 
+        {/*  <Sleep />*/}
+         <button onClick={() => handleDownload(currentSong)}>Download</button>
+         
+         </div>
          
           <h3 className="text-2xl font-bold">{currentSong.title}</h3>
           <p className="text-gray-500">{currentSong.name}</p>
