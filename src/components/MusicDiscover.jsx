@@ -42,7 +42,7 @@ const MusicDiscover = () => {
   const [player, setPlayer] = useState(null);
   const [eq, setEq] = useState(null);
   const [songUrl, setSongUrl] = useState(null);
-
+  const base_url = import.meta.env.VITE_API_URL;
   
 
   const defaultOptions = {
@@ -204,7 +204,7 @@ const formatTime = (time) => {
     
   async function getData() {
     try {
-      const response  = await axios.get(`https://jiosaavn-api-privatecvc2.vercel.app/search/songs?query=${searchQuery}&limit=20&page=1`);
+      const response  = await axios.get(`${base_url}/search/songs?query=${searchQuery}&limit=20&page=1`);
       const data = await response.data;
       const formattedSongs = data.data.results.map((song) => ({
         ...song,
@@ -289,7 +289,7 @@ const isSongFavorite = (songId) => {
 async function getArtistSongs(search) {
   try {
     setIsLoading(true);
-    const response = await axios.get(`https://jiosaavn-api-privatecvc2.vercel.app/search/songs?query=${search}&limit=20&page=1`);
+    const response = await axios.get(`${base_url}/search/songs?query=${search}&limit=20&page=1`);
     const data = await response.data;
     setArtistSongs(data.data.results)
     setIsLoading(false);
@@ -302,7 +302,7 @@ async function getArtistSongs(search) {
 
 async function handleCategories(category) {
   try {
-    const res = await axios.get(`https://jiosaavn-api-privatecvc2.vercel.app/modules?language=${category}`)
+    const res = await axios.get(`${base_url}/modules?language=${category}`)
     const data = await res.data;
     setCategoryData(data.data.charts);
   }
@@ -316,7 +316,7 @@ async function handleCategories(category) {
 async function getCategorySongs(id) {
   try {
     setIsLoading(true);
-    const res = await axios.get(`https://jiosaavn-api-privatecvc2.vercel.app/playlists?id=${id}`)
+    const res = await axios.get(`${base_url}/playlists?id=${id}`)
     const data = await res.data;
     setCategorySongs(data.data.songs)
     setIsLoading(false);
