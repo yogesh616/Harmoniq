@@ -1,44 +1,42 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FaTimes, FaPlay, FaPause, FaHeadphones, FaHeart as FaHeartRegular, FaHeart as FaHeartSolid} from 'react-icons/fa';
 import { MdOutlineVolumeOff, MdOutlineVolumeUp } from "react-icons/md";
 import { usePlayer } from '../Context/Context';
 import Loader from './Loader';
 import './player.css'
-//import TopArtist from './TopArtist';
-//import AppDrawer from './AppDrawer';
+import TopArtist from './TopArtist';
+import AppDrawer from './AppDrawer';
 import axios from 'axios';
-//import musicPng from '../assets/music.png'
+import musicPng from '../assets/music.png'
 import './flip.css';
-//import * as Tone from "tone";
-//import Lottie from 'react-lottie'
-//import person from '../assets/person.json'
+import * as Tone from "tone";
+import Lottie from 'react-lottie'
+import person from '../assets/person.json'
 import { useSwipeable } from 'react-swipeable';
 
 import box from '../assets/box.json'
-//import Sleep from './Sleep';
+import Sleep from './Sleep';
 
 
 const MusicDiscover = () => {
-  const [searchQuery, setSearchQuery] = useState('mitraz');
+  const [searchQuery, setSearchQuery] = useState('');
   const [songs, setSongs] = useState([]);
   const [favorite, setFavorite] = useState([]);
   const [isFavorite, setIsFavorite] = useState(false);
   const [activeTab, setActiveTab] = useState('Songs');
-  //const [searchArtist, setSearchArtist] = useState('');
+  const [searchArtist, setSearchArtist] = useState('');
   const [artistSongs, setArtistSongs] = useState([]);
   const [isPlayerVisible, setIsPlayerVisible] = useState(false);
   const [currentSong, setCurrentSong] = useState(null);
   const {musicDuration, currentTime, setMusicDuration, setCurrentTime,  audioRef, isPlaying, setIsPlaying, playSong, Latest, isOpen, toggleDrawer, TopArtists, isArtistOpen, toggleArtistDrawer, isCategoryOpen, toggleCategoryDrawer } = usePlayer();
   const [isLoading, setIsLoading] = useState(false);
    const [progress, setProgress] = useState(0)
-  //const [category, setCategory] = useState('hindi');
+  
   const [categoryData, setCategoryData] = useState([]);
   const [CategorySongs, setCategorySongs] = useState([]);
   const [isMuted, setIsMuted] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
-  
-  //const [player, setPlayer] = useState(null);
-  
+ 
   const [songUrl, setSongUrl] = useState(null);
   const base_url = import.meta.env.VITE_API_URL;
   
@@ -69,7 +67,7 @@ const MusicDiscover = () => {
     localStorage.setItem('dark-mode', darkMode);
   }, [darkMode]);
 
-   
+    
 
   const handleMuteToggle = () => {
     setIsMuted(prev => {
@@ -130,7 +128,7 @@ const formatTime = (time) => {
 
 
   useEffect(() => {
-    getData();
+   
     setActiveTab('Songs')
   }, [searchQuery]);
 
@@ -150,10 +148,12 @@ const formatTime = (time) => {
       audioRef.current.removeEventListener('ended', handleEnded);
     };
   }, [audioRef.current]);
+
+  
   
   
     useEffect(() => {
-      getData();
+   
       setActiveTab('Songs')
     }, [searchQuery]);
   
@@ -195,22 +195,55 @@ const formatTime = (time) => {
       setSongUrl(formattedSong.downloadUrl);
     };
     
-  async function getData() {
-    try {
-      const response  = await axios.get(`${base_url}/search/songs?query=${searchQuery}&limit=20&page=1`);
-      const data = await response.data;
-      const formattedSongs = data.data.results.map((song) => ({
-        ...song,
-        formattedDuration: formatDuration(song.duration),
-      }));
-      setSongs(formattedSongs);
-    } catch (error) {
-      console.error("Error fetching songs:", error);
-    }
+    const fetchData = useCallback(async function getData() {
+      try {
+        const search = searchQuery || 'mitraz' 
+        const response  = await axios.get(`${base_url}/search/songs?query=${search}&limit=20&page=1`);
+        const data =  response.data;
+        const formattedSongs = data.data.results.map((song) => ({
+          ...song,
+          formattedDuration: formatDuration(song.duration),
+        }));
+        setSongs(formattedSongs);
+      } catch (error) {
+        console.error("Error fetching songs:", error);
+      }
+    }, [searchQuery])
+    const [debouncedQuery, setDebouncedQuery] = useState(searchQuery);
+
+useEffect(() => {
+  const timer = setTimeout(() => {
+    setDebouncedQuery(searchQuery);  // Update debounced query after delay
+  }, 500);  // 500ms debounce time
+
+  // Cleanup function to clear timeout if searchQuery changes before delay
+  return () => clearTimeout(timer);
+}, [searchQuery]);
+
+// Triggering fetchData after debouncedQuery change
+useEffect(() => {
+  if (debouncedQuery) {
+    fetchData();
   }
+}, [debouncedQuery]);
+
+   
+// first rendering
+useEffect(() => {
+  fetchData()
+  handleCategories('hindi');
+}, [])
+
+
+const inputRef = useRef(null)
+  
+
 
   const handleSearch = () => {
     setSearchQuery('')
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
   };
 
   const formatDuration = (duration) => {
@@ -318,12 +351,6 @@ async function getCategorySongs(id) {
     console.error('Error fetching category songs:', error);
   }
 }
- 
-useEffect(() => {
-  handleCategories('hindi');
-}, [])
-
-
 
 const handleDownload = (song) => {
   const fileUrl = song.downloadUrl;
@@ -359,8 +386,7 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
       setIsDrawerOpen(true); // Open the drawer on swipe up
     },
   });
-
-
+ 
 
 
   return (
@@ -396,13 +422,13 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
 
         <div className="flex items-center mt-4 mb-8 bg-gray-100 rounded-full dark:text-slate-400 dark:bg-zinc-900">
           <FaTimes onClick={handleSearch} className="w-5 h-5 ml-3 text-gray-500 cursor-pointer" />
-          <input
+          <input ref={inputRef}
             type="text"
             value={searchQuery}
 		  onFocus={() => setIsPlayerVisible(false)}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search"
-            className="w-full py-2 pl-4 pr-4 text-sm bg-gray-100 rounded-full focus:outline-none"
+            placeholder="Mitraz"
+            className="w-full py-2 pl-4 pr-4 text-sm bg-gray-100 rounded-full focus:outline-none placeholder:italic placeholder:text-slate-500"
           />
           <FaHeadphones onClick={()=> setIsPlayerVisible(!isPlayerVisible)} className='cursor-pointer' />
         </div>
@@ -541,7 +567,7 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
           <svg className="animate-bounce w-6 h-6 ..." />
   
           <div className={`app-drawer dark:text-slate-400 dark:bg-zinc-900 ${isDrawerOpen ? 'open' : ''}`}>
-            <span className='backButton' onClick={() => {setTimeout(() => { toggleDrawer()}, 200);}}><i className="fa-solid fa-chevron-down"></i></span>
+            <span className='backButton' onClick={toggleDrawer}><i className="fa-solid fa-chevron-down"></i></span>
 
             <button className="button hidden" onClick={toggleDrawer}>
               <svg className="svgIcon" viewBox="0 0 384 512">
@@ -843,9 +869,7 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
           </div>
         </div>
 
-        <div className=" items-center justify-center w-2/3 m-1 mt-2 hidden">
-          <button onClick={() => handleDownload(currentSong)}>Download</button>
-        </div>
+       
 
         <h3 className="text-2xl font-bold">{currentSong.title}</h3>
         <p className="text-gray-500">{currentSong.name}</p>
@@ -853,16 +877,13 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
         <div className="flex justify-between w-full mt-4">
 
         <button
-            style={{ paddingLeft: '12px' }}
-            onClick={handleMuteToggle}
-            className="w-10 h-10 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700"
-          >
-            {isMuted ? <MdOutlineVolumeOff /> : <MdOutlineVolumeUp />}
+          style={{ paddingLeft: '12px', display: 'flex', alignItems: 'center' }}
+          onClick={() => handleDownload(currentSong)}
+          className="w-10 h-10 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700">
+            <i className="fa-solid fa-download"></i>
           </button>
 
-         
-
-
+       
           <button
             style={{ paddingLeft: '12px' }}
             onClick={() => setIsPlaying(!isPlaying)}
@@ -870,15 +891,16 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
           >
             {isPlaying ? <FaPause /> : <FaPlay />}
           </button>
-
+        
           <button
-          style={{ paddingLeft: '12px' }}
-          onClick={() => handleDownload(currentSong)}
-          className="w-10 h-10 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700 flex items-center">
-         <i className="fa-solid fa-download"></i>
-         </button>
+            style={{ paddingLeft: '12px' }}
+            onClick={handleMuteToggle}
+            className="w-10 h-10 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700"
+          >
+            {isMuted ? <MdOutlineVolumeOff /> : <MdOutlineVolumeUp />}
+          </button>
 
-
+        
         </div>
 
         <label className="w-full flex mt-2 items-center justify-center gap-1 px-1">
