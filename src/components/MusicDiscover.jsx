@@ -373,6 +373,7 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
     
     <button
           onClick={() => setDarkMode(!darkMode)}
+	    style={{position: 'fixed', right: '-10px', borderRadius: '18px 0 0 18px' }}
           className="border-0 rounded px-4 py-2 text-sm font-medium text-white bg-indigo-600  dark:bg-slate-800 dark:text-yellow-400 transition-all duration-300"
         >
           {darkMode ? (<i className="fa-regular fa-sun"></i>) : (<i className="fa-solid fa-moon"></i>)}
@@ -389,7 +390,7 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
       <span className="word">genres</span>
       <span className="word">remixes</span>
     </div>
-    { currentSong && <div onClick={()=> setIsPlayerVisible(!isPlayerVisible)} className='cursor-pointer border-0 player-btn px-4 py-2 text-sm font-medium text-white bg-indigo-600'><i  className="fa-solid fa-headphones cursor-pointer"></i>
+    { currentSong && <div style={{position: 'fixed', right: '-10px', borderRadius: '18px 0 0 18px', top: '60%' }} onClick={()=> setIsPlayerVisible(!isPlayerVisible)} className='cursor-pointer border-0 player-btn px-4 py-2 text-sm font-medium text-white bg-indigo-600'><i  className="fa-solid fa-headphones cursor-pointer"></i>
     </div>}
   </div>
 </div>
