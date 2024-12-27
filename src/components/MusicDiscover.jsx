@@ -4,18 +4,18 @@ import { MdOutlineVolumeOff, MdOutlineVolumeUp } from "react-icons/md";
 import { usePlayer } from '../Context/Context';
 import Loader from './Loader';
 import './player.css'
-import TopArtist from './TopArtist';
-import AppDrawer from './AppDrawer';
+//import TopArtist from './TopArtist';
+//import AppDrawer from './AppDrawer';
 import axios from 'axios';
-import musicPng from '../assets/music.png'
+//import musicPng from '../assets/music.png'
 import './flip.css';
-import * as Tone from "tone";
-import Lottie from 'react-lottie'
-import person from '../assets/person.json'
-
+//import * as Tone from "tone";
+//import Lottie from 'react-lottie'
+//import person from '../assets/person.json'
+import { useSwipeable } from 'react-swipeable';
 
 import box from '../assets/box.json'
-import Sleep from './Sleep';
+//import Sleep from './Sleep';
 
 
 const MusicDiscover = () => {
@@ -24,23 +24,21 @@ const MusicDiscover = () => {
   const [favorite, setFavorite] = useState([]);
   const [isFavorite, setIsFavorite] = useState(false);
   const [activeTab, setActiveTab] = useState('Songs');
-  const [searchArtist, setSearchArtist] = useState('');
+  //const [searchArtist, setSearchArtist] = useState('');
   const [artistSongs, setArtistSongs] = useState([]);
   const [isPlayerVisible, setIsPlayerVisible] = useState(false);
   const [currentSong, setCurrentSong] = useState(null);
   const {musicDuration, currentTime, setMusicDuration, setCurrentTime,  audioRef, isPlaying, setIsPlaying, playSong, Latest, isOpen, toggleDrawer, TopArtists, isArtistOpen, toggleArtistDrawer, isCategoryOpen, toggleCategoryDrawer } = usePlayer();
   const [isLoading, setIsLoading] = useState(false);
    const [progress, setProgress] = useState(0)
-  const [category, setCategory] = useState('hindi');
+  //const [category, setCategory] = useState('hindi');
   const [categoryData, setCategoryData] = useState([]);
   const [CategorySongs, setCategorySongs] = useState([]);
   const [isMuted, setIsMuted] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
-  const [bass, setBass] = useState(0);    // Low frequencies
-  const [mid, setMid] = useState(0);      // Mid frequencies
-  const [treble, setTreble] = useState(0);
-  const [player, setPlayer] = useState(null);
-  const [eq, setEq] = useState(null);
+  
+  //const [player, setPlayer] = useState(null);
+  
   const [songUrl, setSongUrl] = useState(null);
   const base_url = import.meta.env.VITE_API_URL;
   
@@ -71,12 +69,7 @@ const MusicDiscover = () => {
     localStorage.setItem('dark-mode', darkMode);
   }, [darkMode]);
 
-    const reset = () => {
-      setBass(0);
-      setMid(0);
-      setTreble(0);
-      stopPlayback()
-    }
+   
 
   const handleMuteToggle = () => {
     setIsMuted(prev => {
@@ -331,62 +324,6 @@ useEffect(() => {
 }, [])
 
 
-useEffect(() => {
-  if (songUrl) {
-    // Dispose of the previous player if it exists
-    if (player) {
-      player.dispose();
-    }
-
-    // Create a new Tone.Player for the new song URL
-    const newPlayer = new Tone.Player({
-      url: songUrl,
-      autostart: false,  // Start playback manually
-    }).toDestination();
-
-    // Create a new EQ3 for bass, mid, and treble
-    const newEq = new Tone.EQ3({
-      low: bass,
-      mid: mid,
-      high: treble,
-    }).toDestination();
-
-    // Connect the player to the EQ and set up state
-    newPlayer.connect(newEq);
-    setPlayer(newPlayer);
-    setEq(newEq);
-
-    // Cleanup on unmount or URL change
-    return () => {
-      newPlayer.dispose();
-      newEq.dispose();
-    };
-  }
-}, [songUrl]);
- 
-useEffect(() => {
-  if (eq) {
-    eq.low.value = bass;
-    eq.mid.value = mid;
-    eq.high.value = treble;
-  }
-}, [bass, mid, treble, eq]);
-
-// Start playback when a song is played
-const startPlayback = async () => {
-  await Tone.start();
-  player.start();  // Ensure the new player is used here
-  setIsPlaying(true);
-};
-
-// Stop playback
-const stopPlayback = () => {
-  if (player) {
-    player.stop();
-    setIsPlaying(false);
-  }
-};
-
 
 const handleDownload = (song) => {
   const fileUrl = song.downloadUrl;
@@ -406,6 +343,22 @@ const handleDownload = (song) => {
       .catch(err => console.error('Error downloading the file:', err));
 };
 
+const swipeHandlers = useSwipeable({
+  onSwipedDown: () => setIsPlayerVisible(false),  // Hide player on swipe down
+  onSwipedUp: () => setIsPlayerVisible(true),    // Show player on swipe up
+});
+ 
+const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
+
+  // Swipe handlers for the drawer
+  const swipeFavorites = useSwipeable({
+    onSwipedDown: () => {
+      setIsDrawerOpen(false); // Close the drawer on swipe down
+    },
+    onSwipedUp: () => {
+      setIsDrawerOpen(true); // Open the drawer on swipe up
+    },
+  });
 
 
 
@@ -462,7 +415,7 @@ const handleDownload = (song) => {
           </span>
           
           <span
-            onClick={() => {setActiveTab('Favorite'); setIsPlayerVisible(false); setTimeout(() => toggleDrawer(), 200)}}
+            onClick={() => {setActiveTab('Favorite'); setIsPlayerVisible(false); setTimeout(() => {toggleDrawer(); setIsDrawerOpen(true);}, 200); }}
             className={`cursor-pointer ${activeTab === 'Favorite' ? 'border-b-2 border-yellow-400' : 'text-gray-400 hover:text-gray-800'}`}
           >
             Favorite
@@ -536,10 +489,10 @@ const handleDownload = (song) => {
                     </div>
                   </div>
                   <button
-                    onClick={() => {togglePlayPause(song.downloadUrl[2].link), handleSongClick(song)}}
+                    onClick={() => {togglePlayPause(song.downloadUrl[1].link), handleSongClick(song)}}
                     className="text-gray-400 cursor-pointer"
                   >
-                    {isPlaying && audioRef.current.src === song.downloadUrl[2].link ? <FaPause /> : <FaPlay />}
+                    {isPlaying && audioRef.current.src === song.downloadUrl[1].link ? <FaPause /> : <FaPlay />}
                   </button>
                 </li>
               )) : <Loader />}
@@ -575,71 +528,68 @@ const handleDownload = (song) => {
 
           </div>
         )}
-        {activeTab === 'Favorite' && (
-          <div>
-            <h3 className="mb-4 text-lg font-semibold cursor-pointer" onClick={toggleDrawer}>Favorites <i className="fa-solid fa-star " style={{color: '#fcd34d'}}></i></h3>
-            <svg className="animate-bounce w-6 h-6 ...">
-  
-</svg>
-  
-        
-            <div className={`app-drawer dark:text-slate-400 dark:bg-zinc-900 ${isOpen ? 'open' : ''}`}>
-      <span className='backButton ' onClick={toggleDrawer}><i className="fa-solid fa-chevron-down"></i></span>
-      
-<button className="button hidden" onClick={toggleDrawer}>
-  <svg className="svgIcon" viewBox="0 0 384 512">
-    <path
-      d="M214.6 41.4c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 141.2V448c0 17.7 14.3 32 32 32s32-14.3 32-32V141.2L329.4 246.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-160-160z"
-    ></path>
-  </svg>
-</button>
 
+       {activeTab === 'Favorite' && (
+        <div {...swipeFavorites} onClick={() => {
+          toggleDrawer();
+          setIsDrawerOpen(true);
+        }}> {/* Apply swipeable handlers */}
+          <h3 className="mb-4 text-lg font-semibold cursor-pointer" onClick={toggleDrawer}>
+            Favorites <i className="fa-solid fa-star" style={{ color: '#fcd34d' }}></i>
+          </h3>
+          
+          <svg className="animate-bounce w-6 h-6 ..." />
+  
+          <div className={`app-drawer dark:text-slate-400 dark:bg-zinc-900 ${isDrawerOpen ? 'open' : ''}`}>
+            <span className='backButton' onClick={() => {setTimeout(() => { toggleDrawer()}, 200);}}><i className="fa-solid fa-chevron-down"></i></span>
 
-      
-      <div className="drawer-handle" onClick={toggleDrawer}>
-        <span className="handle-bar"></span>
-      </div>
-      <div className="app-list">
-        <h2 className='heart-beat dark:text-slate-400 dark:bg-zinc-900'>Heart Beats</h2>
-        <ul className='song-list'>
-          {favorite.length > 0 ? favorite.map((song, index) => (
-             <li
-             key={index}
-             className="flex items-center justify-between p-2 bg-white rounded-lg shadow cursor-pointer dark:text-slate-400 dark:bg-zinc-900"
-             
-           >
-             <div className="flex items-center" onClick={() => handleSongClick(song)}>
-               <img
-                 src={song.image[0].link}
-                 alt={song.title}
-                 className="w-10 h-10 rounded-lg cursor-pointer"
-                
-               />
-               <div className="ml-3">
-                 <h4 className="text-base font-semibold" >{song.name}</h4>
-                 <p className="text-sm text-gray-500">
-                   {song.primaryArtists} &nbsp; &nbsp;
-                   <span className="text-sm text-gray-400">
-                     {song.formattedDuration}
-                   </span> &nbsp; &nbsp; &nbsp; &nbsp;
-                   <i className={`fa-heart fa-solid `} style={{ cursor: 'pointer', color: '#dc2626' }}></i>
-                 </p>
-               </div>
-             </div>
-             <button
-                    onClick={() => togglePlayPause(song.downloadUrl[2].link)}
-                    className="text-gray-400 cursor-pointer"
+            <button className="button hidden" onClick={toggleDrawer}>
+              <svg className="svgIcon" viewBox="0 0 384 512">
+                <path d="M214.6 41.4c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 141.2V448c0 17.7 14.3 32 32 32s32-14.3 32-32V141.2L329.4 246.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-160-160z"></path>
+              </svg>
+            </button>
+  
+            <div className="drawer-handle" onClick={toggleDrawer}>
+              <span className="handle-bar"></span>
+            </div>
+            <div className="app-list">
+              <h2 className="heart-beat dark:text-slate-400 dark:bg-zinc-900">Heart Beats</h2>
+              <ul className="song-list">
+                {favorite.length > 0 ? favorite.map((song, index) => (
+                  <li
+                    key={index}
+                    className="flex items-center justify-between p-2 bg-white rounded-lg shadow cursor-pointer dark:text-slate-400 dark:bg-zinc-900"
                   >
-                    {isPlaying && audioRef.current.src === song.downloadUrl[2].link ? <FaPause /> : <FaPlay />}
-                  </button>
-
-           </li>
-          )) : <Loader />}
-        </ul>
-      </div>
-    </div>
+                    <div className="flex items-center" onClick={() => handleSongClick(song)}>
+                      <img
+                        src={song.image[0].link}
+                        alt={song.title}
+                        className="w-10 h-10 rounded-lg cursor-pointer"
+                      />
+                      <div className="ml-3">
+                        <h4 className="text-base font-semibold">{song.name}</h4>
+                        <p className="text-sm text-gray-500">
+                          {song.primaryArtists} &nbsp; &nbsp;
+                          <span className="text-sm text-gray-400">
+                            {song.formattedDuration}
+                          </span> &nbsp; &nbsp; &nbsp; &nbsp;
+                          <i className="fa-heart fa-solid" style={{ cursor: 'pointer', color: '#dc2626' }}></i>
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => togglePlayPause(song.downloadUrl[2].link)}
+                      className="text-gray-400 cursor-pointer"
+                    >
+                      {isPlaying && audioRef.current.src === song.downloadUrl[2].link ? <FaPause /> : <FaPlay />}
+                    </button>
+                  </li>
+                )) : <Loader />}
+              </ul>
+            </div>
           </div>
-        )}
+        </div>
+      )}
         {activeTab === 'Artists' && (
           <div>
             <h3 className="mb-4 text-lg font-semibold" > Top Artists</h3>
@@ -844,113 +794,115 @@ const handleDownload = (song) => {
         )}
       </div>
 
-      {/* Player Component */}
-      {isPlayerVisible && currentSong && (
-        <div style={{zIndex: '1002'}} className="fixed bottom-0 w-full max-w-md px-4 bg-white rounded-t-xl shadow-md dark:text-slate-400 dark:bg-zinc-900">
-        <div className="flex flex-col items-center py-4">
-          <div className="flip-card w-72 h-72 rounded-lg shadow-lg">
+      {/* Player Container */}
+     
+
+      <div  {...swipeHandlers}
+  style={{
+    zIndex: '1002',
+    transform: isPlayerVisible ? 'translateY(0)' : 'translateY(100%)',
+    opacity: isPlayerVisible ? 1 : 0, // Smooth fade in/out
+    transition: 'transform 0.3s ease-in-out, opacity 0.3s ease-in-out', // Smooth transitions
+  }}
+  className="fixed bottom-0 w-full max-w-md px-4 bg-white rounded-t-xl shadow-md dark:text-slate-400 dark:bg-zinc-900"
+>
+  {currentSong && (
+    <>
+      <div className="flex items-center justify-start mt-2">
+        <button
+          onClick={() => setIsPlayerVisible(false)}
+          className="w-10 h-10 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700 ml-2"
+        >
+          <i className="fa-solid fa-chevron-down"></i>
+        </button>
+      </div>
+      <div className="flex flex-col items-center py-4">
+        <div className="flip-card w-72 h-72 rounded-lg shadow-lg">
+          <div
+            className={`flip-card-inner w-72 h-72 rounded-lg shadow-lg ${
+              isFlipped ? 'rotate' : 'rotate-back'
+            }`}
+          >
+            {/* Front of the flip card */}
             <div
-              className={`flip-card-inner w-72 h-72 rounded-lg shadow-lg ${
-                isFlipped ? "rotate" : "rotate-back"
-              }`}
+              className="flip-card-front w-72 h-72 rounded-lg shadow-lg"
+              onClick={() => setIsFlipped(true)}
             >
-              {/* Front of the flip card */}
-              <div
-                className="flip-card-front w-72 h-72 rounded-lg shadow-lg"
-                onClick={() => setIsFlipped(true)}
-              >
-               
-               
-                <img
-                  src={currentSong.albumArt}
-                  alt="Album Art"
-                  className="w-100 h-100 rounded-lg shadow-lg img cursor-pointer"
-                />
-              </div>
-  
-              {/* Back of the flip card */}
-              <div className="flip-card-back w-72 h-72 rounded-lg shadow-lg">
-                <button onClick={reset} className='bg-slate-700 px-2 py-1 my-2 rounded-lg'>Reset</button>
-              <div className="flex  items-center justify-center  w-70 h-1/3 z-20">
-               <div className="Slider">
-	               <input className="level" type="range" min="-40" max="10" value={bass} onChange={(e) => setBass(Number(e.target.value))}   />
-               </div>
-               <div className="Slider">
-	               <input className="level" type="range" min="-40" max="10" value={mid} onChange={(e) => setMid(Number(e.target.value))}  />
-               </div>
-               <div className="Slider">
-	               <input className="level" type="range" min="-40" max="10" value={treble} onChange={(e) => setTreble(Number(e.target.value))}  />
-               </div>
-              </div>
-                {/* Back Button to flip the card back to the front */}
-                <button
-                  onClick={() => setIsFlipped(false)}
-                  className="mt-4 px-4 py-2 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700"
-                >
-                  Back to Front
-                </button>
-              </div>
+              <img
+                src={currentSong.albumArt}
+                alt="Album Art"
+                className="w-100 h-100 rounded-lg shadow-lg img cursor-pointer"
+              />
+            </div>
+
+            {/* Back of the flip card */}
+            <div className="flip-card-back w-72 h-72 rounded-lg shadow-lg"  onClick={() => setIsFlipped(false)}>
+             
+              
             </div>
           </div>
-  
-          {/* Song details */}
-        <div className='flex items-center justify-center w-2/3 m-1 mt-2'> 
-        {/*  <Sleep />*/}
-         <button onClick={() => handleDownload(currentSong)}>Download</button>
-         
-         </div>
-         
-          <h3 className="text-2xl font-bold">{currentSong.title}</h3>
-          <p className="text-gray-500">{currentSong.name}</p>
-  
-          {/* Controls */}
-          <div className="flex justify-between w-full mt-4">
-            <button
-              onClick={() => setIsPlayerVisible(false)}
-              className="w-10 h-10 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700 ml-2"
-            >
-              <i className="fa-solid fa-hand"></i>
-            </button>
-  
-            <button
-              style={{ paddingLeft: "12px" }}
-              onClick={() => setIsPlaying(!isPlaying)}
-              className="w-10 h-10 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700"
-            >
-              {isPlaying ?   <FaPause /> : <FaPlay />}
-            </button>
-  
-            {/* Volume button */}
-            <button
-              style={{ paddingLeft: "12px" }}
-              onClick={handleMuteToggle}
-              className="w-10 h-10 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700"
-            >
-              {isMuted ? <MdOutlineVolumeOff /> : <MdOutlineVolumeUp />}
-            </button>
-          </div>
-  
-          {/* Progress bar */}
-          
-          <label className="w-full flex mt-2 items-center justify-center gap-1 px-1">
-          <span className='currentTime'>{formatTime(currentTime)}</span>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={progress}
-              onChange={handleProgressChange}
-              className="w-10/12 h-1 bg-gray-200 rounded-lg appearance-none thumb cursor-pointer"
-              style={{
-                background: `linear-gradient(to right, #fad0c4 ${progress}%, #e5e7eb ${progress}%)`,
-              }}
-            />
-            <span className='musicDuration'>{formatTime(musicDuration)}</span>
-          </label>
-          
         </div>
+
+        <div className=" items-center justify-center w-2/3 m-1 mt-2 hidden">
+          <button onClick={() => handleDownload(currentSong)}>Download</button>
+        </div>
+
+        <h3 className="text-2xl font-bold">{currentSong.title}</h3>
+        <p className="text-gray-500">{currentSong.name}</p>
+
+        <div className="flex justify-between w-full mt-4">
+
+        <button
+            style={{ paddingLeft: '12px' }}
+            onClick={handleMuteToggle}
+            className="w-10 h-10 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700"
+          >
+            {isMuted ? <MdOutlineVolumeOff /> : <MdOutlineVolumeUp />}
+          </button>
+
+         
+
+
+          <button
+            style={{ paddingLeft: '12px' }}
+            onClick={() => setIsPlaying(!isPlaying)}
+            className="w-10 h-10 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700"
+          >
+            {isPlaying ? <FaPause /> : <FaPlay />}
+          </button>
+
+          <button
+          style={{ paddingLeft: '12px' }}
+          onClick={() => handleDownload(currentSong)}
+          className="w-10 h-10 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700 flex items-center">
+         <i className="fa-solid fa-download"></i>
+         </button>
+
+
+        </div>
+
+        <label className="w-full flex mt-2 items-center justify-center gap-1 px-1">
+          <span className="currentTime">{formatTime(currentTime)}</span>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={progress}
+            onChange={handleProgressChange}
+            className="w-10/12 h-1 bg-gray-200 rounded-lg appearance-none thumb cursor-pointer"
+            style={{
+              background: `linear-gradient(to right, #fad0c4 ${progress}%, #e5e7eb ${progress}%)`,
+            }}
+          />
+          <span className="musicDuration">{formatTime(musicDuration)}</span>
+        </label>
       </div>
-      )}
+    </>
+  )}
+      </div>
+      
+
+
     </div>
   );
 };
