@@ -9,14 +9,14 @@ import AppDrawer from './AppDrawer';
 import axios from 'axios';
 import musicPng from '../assets/music.png'
 import './flip.css';
-import * as Tone from "tone";
-import Lottie from 'react-lottie'
+//import * as Tone from "tone";
+//import Lottie from 'react-lottie'
 import person from '../assets/person.json'
 import { useSwipeable } from 'react-swipeable';
 
 import box from '../assets/box.json'
 import Sleep from './Sleep';
-
+import Animation from './Animation';
 
 const MusicDiscover = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,8 +27,8 @@ const MusicDiscover = () => {
   const [searchArtist, setSearchArtist] = useState('');
   const [artistSongs, setArtistSongs] = useState([]);
   const [isPlayerVisible, setIsPlayerVisible] = useState(false);
-  const [currentSong, setCurrentSong] = useState(null);
-  const {musicDuration, currentTime, setMusicDuration, setCurrentTime,  audioRef, isPlaying, setIsPlaying, playSong, Latest, isOpen, toggleDrawer, TopArtists, isArtistOpen, toggleArtistDrawer, isCategoryOpen, toggleCategoryDrawer } = usePlayer();
+  
+  const {pausedTime, setPausedTime, currentSong, setCurrentSong,  musicDuration, currentTime, setMusicDuration, setCurrentTime,  audioRef, isPlaying, setIsPlaying, playSong, Latest, isOpen, toggleDrawer, TopArtists, isArtistOpen, toggleArtistDrawer, isCategoryOpen, toggleCategoryDrawer } = usePlayer();
   const [isLoading, setIsLoading] = useState(false);
    const [progress, setProgress] = useState(0)
   
@@ -40,15 +40,10 @@ const MusicDiscover = () => {
   const [songUrl, setSongUrl] = useState(null);
   const base_url = import.meta.env.VITE_API_URL;
   
+  
+ 
 
-  const defaultOptions = {
-    loop: true,
-    autoplay: true,
-    animationData: box,
-    rendererSettings: {
-      preserveAspectRatio: 'xMidYMid slice'
-    }
-  };
+
   // implimenting dark mode
   const [darkMode, setDarkMode] = useState(() => {
     // Check localStorage to see if dark mode is already enabled
@@ -75,6 +70,13 @@ const MusicDiscover = () => {
         return !prev;
     });
 }
+
+useEffect(() => {
+   
+  setActiveTab('Songs')
+}, [searchQuery]);
+
+
 useEffect(() => {
   const handleEnded = () => {
     setIsPlaying(false);
@@ -127,10 +129,7 @@ const formatTime = (time) => {
 
 
 
-  useEffect(() => {
-   
-    setActiveTab('Songs')
-  }, [searchQuery]);
+  
 
   useEffect(() => {
     const handleEnded = () => {
@@ -149,13 +148,6 @@ const formatTime = (time) => {
     };
   }, [audioRef.current]);
 
-  
-  
-  
-    useEffect(() => {
-   
-      setActiveTab('Songs')
-    }, [searchQuery]);
   
     useEffect(() => {
       if (isPlaying && currentSong) {
@@ -193,6 +185,41 @@ const formatTime = (time) => {
       playSong(formattedSong);  // Start playing the song
       setIsPlayerVisible(true);  // Show the player UI
       setSongUrl(formattedSong.downloadUrl);
+    };
+    
+
+
+    const togglePlayPause = (url) => {
+      if (isPlaying && audioRef.current.src === url) {
+        // Store the current time before pausing
+        console.log(audioRef.current)
+        setPausedTime(audioRef.current.currentTime);
+        audioRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        // If it's the same song, resume from the paused time
+        if (audioRef.current.src === url) {
+          audioRef.current.currentTime = pausedTime;
+        } else {
+          // For a new song, start from the beginning
+          setPausedTime(0); // Reset the paused time for new song
+          setCurrentSong({
+            ...currentSong,
+            downloadUrl: url,
+          });
+          playSong(url);
+        }
+    
+        audioRef.current.play();
+        setIsPlaying(true);
+      }
+    };
+    
+  
+    const handleProgressChange = (e) => {
+      const newTime = (e.target.value / 100) * audioRef.current.duration;
+      audioRef.current.currentTime = newTime;
+      setProgress(e.target.value);
     };
     
     const fetchData = useCallback(async function getData() {
@@ -252,25 +279,7 @@ const inputRef = useRef(null)
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')} min`;
   };
 
-  const togglePlayPause = (url) => {
-    if (isPlaying && audioRef.current.src === url) {
-      setIsPlaying(false);
-    } else {
-      setCurrentSong({
-        ...currentSong,
-        downloadUrl: url,
-      });
-      playSong();
-      setIsPlaying(true);
-
-    }
-  };
-
-  const handleProgressChange = (e) => {
-    const newTime = (e.target.value / 100) * audioRef.current.duration;
-    audioRef.current.currentTime = newTime;
-    setProgress(e.target.value);
-  };
+ 
  // Load favorite songs from localStorage on component mount
  useEffect(() => {
   try {
@@ -390,38 +399,53 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
 
 
   return (
-    <div className="flex flex-col items-center justify-between min-h-screen px-4 py-6 bg-gray-50 dark:text-slate-400 dark:bg-zinc-900">
+    <div className="flex flex-col items-center justify-between min-h-screen px-4 py-2 bg-gray-50 dark:text-slate-400 dark:bg-zinc-900">
      
       <div className="w-full max-w-md">
-      <div className="one">
-  <div className="two">
-    <a href='/' className='logo cursor-pointer'>Syncy</a>
-    
-    <button
-          onClick={() => setDarkMode(!darkMode)}
-	    style={{position: 'fixed', right: '-10px', borderRadius: '18px 0 0 18px' }}
-          className="border-0 rounded px-4 py-2 text-sm font-medium text-white bg-indigo-600  dark:bg-slate-800 dark:text-yellow-400 transition-all duration-300"
-        >
-          {darkMode ? (<i className="fa-regular fa-sun"></i>) : (<i className="fa-solid fa-moon"></i>)}
-        </button>
-    <div className="words">
-      <span className="word">beats</span>
-      <span className="word">melodies</span>
-      <span className="word">tracks</span>
-      <span className="word">albums</span>
-      <span className="word">playlists</span>
-      <span className="word">songs</span>
-      <span className="word">artists</span>
-      <span className="word">vibes</span>
-      <span className="word">genres</span>
-      <span className="word">remixes</span>
+        <div className='w-full overflow-x-auto sticky top-0 bg-gray-50  dark:text-slate-400 dark:bg-zinc-900' >
+
+       
+          <div className="one">
+      <div className="two">
+      <div className="flex items-center justify-between w-full">
+  {/* Left side: Logo and Animation */}
+  <div className="flex items-center space-x-4">
+    <a
+      onClick={() => window.location.reload()}
+      className="logo cursor-pointer text-indigo-600 text-xl font-bold"
+    >
+      Syncy
+    </a>
+    {/* Animation container */}
+    <div className="relative h-[2rem] overflow-hidden ">
+      <Animation />
     </div>
-    { currentSong && <div style={{position: 'fixed', right: '-10px', borderRadius: '18px 0 0 18px', top: '60%' }} onClick={()=> setIsPlayerVisible(!isPlayerVisible)} className='cursor-pointer border-0 player-btn px-4 py-2 text-sm font-medium text-white bg-indigo-600'><i  className="fa-solid fa-headphones cursor-pointer"></i>
-    </div>}
   </div>
+
+  {/* Right side: Dark Mode Button */}
+  <button
+  onClick={() => setDarkMode(!darkMode)}
+  className="rounded-full z-50 border-0 px-3 py-2 text-sm font-medium text-slate-700 bg-gray-300 dark:bg-slate-800 dark:text-yellow-400 transition-all duration-700"
+>
+  <i
+    className={`${
+      darkMode ? "fa-regular fa-sun" : "fa-solid fa-moon"
+    } transform transition-transform duration-700 ease-in-out ${
+      darkMode ? "rotate-180 scale-110" : "rotate-0 scale-100"
+    }`}
+  ></i>
+</button>
+
 </div>
 
-        <div className="flex items-center mt-4 mb-8 bg-gray-100 rounded-full dark:text-slate-400 dark:bg-zinc-900">
+
+
+    { currentSong && <div style={{position: 'fixed', right: '-10px', borderRadius: '18px 0 0 18px', top: '60%' }} onClick={()=> setIsPlayerVisible(!isPlayerVisible)} className='z-50 cursor-pointer border-0 player-btn px-4 py-2 text-sm font-medium text-white bg-indigo-600'><i  className="fa-solid fa-headphones cursor-pointer"></i>
+    </div>}
+  </div>
+          </div>
+
+          <div className="flex items-center mt-4 mb-8 bg-gray-100 rounded-full dark:text-slate-400 dark:bg-zinc-900">
           <FaTimes onClick={handleSearch} className="w-5 h-5 ml-3 text-gray-500 cursor-pointer" />
           <input ref={inputRef}
             type="text"
@@ -432,7 +456,8 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
             className="w-full py-2 pl-4 pr-4 text-sm bg-gray-100 rounded-full focus:outline-none placeholder:italic placeholder:text-slate-500"
           />
           <FaHeadphones onClick={()=> setIsPlayerVisible(!isPlayerVisible)} className='cursor-pointer' />
-        </div>
+          </div>
+          </div>
         <div className="flex items-center justify-between w-full pb-2 mb-4 text-sm font-semibold border-b overflow-x-auto dark:text-slate-400 dark:bg-zinc-900">
           <span
             onClick={() =>{ setActiveTab('Songs'); setIsPlayerVisible(false)} }
@@ -463,9 +488,10 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
         </div>
         {activeTab === 'Songs' && (
           <div className="mb-12 ">
+          <div className='w-full sticky top-0 bg-gray-50  dark:text-slate-400 dark:bg-zinc-900 z-40'>
             <h3 className="mb-4 text-lg font-semibold">Latest Songs</h3>
             <div className="overflow-x-auto">
-  <div className="flex gap-4 mb-10">
+  <div className="flex gap-4 mb-10" >
     {Latest.length > 0 ? Latest.map((song, index) => (
       <div key={index} className="min-w-[130px]">
         <div className="relative cursor-pointer" onClick={() => handleSongClick(song)}>
@@ -486,7 +512,10 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
       </div>
     )) : <Loader />}
   </div>
-</div>
+            </div>
+            </div>
+            
+            <div className='overflow-y-auto '>
             <ul className="space-y-4 ">
               {songs.length > 0 ? songs.map((song, index) => (
                 <li
@@ -524,6 +553,9 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
                 </li>
               )) : <Loader />}
             </ul>
+            </div>
+
+
           </div>
         )}
         {activeTab === 'Latest' && (
@@ -568,13 +600,9 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
           <svg className="animate-bounce w-6 h-6 ..." />
   
           <div className={`app-drawer dark:text-slate-400 dark:bg-zinc-900 ${isDrawerOpen ? 'open' : ''}`}>
-            <span className='backButton' onClick={toggleDrawer}><i className="fa-solid fa-chevron-down"></i></span>
+            <span className='backButton' onClick={() => setIsDrawerOpen(false)}><i className="fa-solid fa-chevron-down"></i></span>
 
-            <button className="button hidden" onClick={toggleDrawer}>
-              <svg className="svgIcon" viewBox="0 0 384 512">
-                <path d="M214.6 41.4c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 141.2V448c0 17.7 14.3 32 32 32s32-14.3 32-32V141.2L329.4 246.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-160-160z"></path>
-              </svg>
-            </button>
+           
   
             <div className="drawer-handle" onClick={toggleDrawer}>
               <span className="handle-bar"></span>
@@ -620,7 +648,7 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
         {activeTab === 'Artists' && (
           <div>
             <h3 className="mb-4 text-lg font-semibold" > Top Artists</h3>
-            <div>
+            <div className='overflow-y-auto h-96'>
 
             {TopArtists.length > 0 ? (
                 <section 
@@ -723,7 +751,8 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
                <button className="animatedButton mx-0.5" onClick={() => handleCategories('haryanvi')}>Haryanvi</button>
            </div>
 
-           {categoryData.length > 0 && (
+             <div className='overflow-y-auto h-96'>
+             {categoryData.length > 0 && (
                 <section 
                     className='  grid grid-cols-2  gap-4 mb-10 md:grid-cols-2 md:gap-8 lg:grid-cols-5 lg:grid-rows-2'>
                     {categoryData.map((chart, index) => (
@@ -816,6 +845,7 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
 
                 </section>
             )}
+             </div>
 
             </div>
         )}
@@ -873,7 +903,10 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
        
 
         <h3 className="text-2xl font-bold">{currentSong.title}</h3>
-        <p className="text-gray-500">{currentSong.name}</p>
+        <p className="text-gray-500" onClick={() => {
+           setSearchQuery(currentSong.name)
+           setIsPlayerVisible(false)}
+        } >{currentSong.name}</p>
 
         <div className="flex justify-between w-full mt-4">
 
@@ -886,12 +919,21 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
 
        
           <button
-            style={{ paddingLeft: '12px' }}
-            onClick={() => setIsPlaying(!isPlaying)}
-            className="w-10 h-10 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700"
-          >
-            {isPlaying ? <FaPause /> : <FaPlay />}
-          </button>
+  style={{ paddingLeft: '12px' }}
+  onClick={() => {
+    // Toggle play/pause and update the audio state
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
+    }
+    setIsPlaying(!isPlaying); // Toggle the playing state
+  }}
+  className="w-10 h-10 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700"
+>
+  {isPlaying ? <FaPause /> : <FaPlay />}
+</button>
+
         
           <button
             style={{ paddingLeft: '12px' }}

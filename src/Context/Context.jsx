@@ -708,6 +708,7 @@ const [isCategoryOpen, setIsCategoryOpen] = useState(false);
 const audioRef = useRef(new Audio());
 const [musicDuration, setMusicDuration] = useState(0);
 const [currentTime, setCurrentTime] = useState(0);
+const [pausedTime, setPausedTime] = useState(0);
 
 const toggleArtistDrawer = () => {
   setIsArtistOpen(!isArtistOpen)
@@ -721,35 +722,39 @@ const toggleDrawer = () => {
 };
 
   
-const playSong = (song) => {
-  // Pause the current song
-  audioRef.current.pause();
+const playSong = (url) => {
+  // If it's the same song, resume from the paused time
+  if (currentSong && currentSong.downloadUrl === url) {
+    audioRef.current.currentTime = pausedTime;
+  } else {
+    // For a new song, reset to the beginning
+    audioRef.current.currentTime = 0;
+  }
 
-  // Set the new song's src directly from the song passed in
-  audioRef.current.src = song.downloadUrl;
-  audioRef.current.currentTime = 0;
-
-  // Update the current song in the state
-  setCurrentSong(song);
-
-  // Start playing the song
+  // Set the song URL
+  audioRef.current.src = url;
   audioRef.current.play();
   setIsPlaying(true);
 };
 
 
+
+
  
 const togglePlayPause = () => {
   if (isPlaying) {
-    audioRef.current.pause();  // Pause the audio
+    // Pause the audio and save the current time
+    audioRef.current.pause();
+    setCurrentTime(audioRef.current.currentTime);  // Save the position
   } else {
-    audioRef.current.play();   // Play the audio
+    // Play the audio and resume from the saved position
+    audioRef.current.play();
   }
-  setIsPlaying(prev => !prev);  // Toggle isPlaying state
+  setIsPlaying(!isPlaying);  // Toggle play/pause state
 };
 
   return (
-    <PlayerContext.Provider value={{ musicDuration, currentTime ,setMusicDuration, setCurrentTime,  audioRef, isPlaying, togglePlayPause, playSong, currentSong, setIsPlaying, Latest, TopArtists, isOpen, toggleDrawer, isArtistOpen, isCategoryOpen, toggleArtistDrawer, toggleCategoryDrawer}}>
+    <PlayerContext.Provider value={{ pausedTime, setPausedTime,  musicDuration, currentTime ,setMusicDuration, setCurrentTime,  audioRef, isPlaying, togglePlayPause, playSong, currentSong, setCurrentSong,  setIsPlaying, Latest, TopArtists, isOpen, toggleDrawer, isArtistOpen, isCategoryOpen, toggleArtistDrawer, toggleCategoryDrawer}}>
       {children}
     </PlayerContext.Provider>
   );
