@@ -3,6 +3,12 @@
 @tailwind utilities;
 
 
+html, body {
+  overscroll-behavior: none; /* Disables pull-to-refresh */
+}
+
+
+
  .zindex {
   z-index: 100  !important;
  }
