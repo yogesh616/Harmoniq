@@ -41,7 +41,18 @@ const MusicDiscover = () => {
   const base_url = import.meta.env.VITE_API_URL;
   
   
- 
+  useEffect(() => {
+    const disableContextMenu = (e) => {
+      e.preventDefault();
+    };
+
+    document.addEventListener('contextmenu', disableContextMenu);
+
+    // Cleanup the event listener on component unmount
+    return () => {
+      document.removeEventListener('contextmenu', disableContextMenu);
+    };
+  }, []);
 
 
   // implimenting dark mode
