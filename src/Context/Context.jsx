@@ -8,6 +8,7 @@ const PlayerContext = createContext();
 export const PlayerProvider = ({ children }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentSong, setCurrentSong] = useState(null);
+
   const Latest = [
     { 
 "id": "zDzWQVkb",
@@ -710,6 +711,11 @@ const [musicDuration, setMusicDuration] = useState(0);
 const [currentTime, setCurrentTime] = useState(0);
 const [pausedTime, setPausedTime] = useState(0);
 
+const [audioQuality, setAudioQuality] = useState(() => {
+  const getAudioQuality = localStorage.getItem('quality');
+  return getAudioQuality ? parseInt(getAudioQuality, 10) : 2;
+});
+
 const toggleArtistDrawer = () => {
   setIsArtistOpen(!isArtistOpen)
 }
@@ -754,7 +760,7 @@ const togglePlayPause = () => {
 };
 
   return (
-    <PlayerContext.Provider value={{ pausedTime, setPausedTime,  musicDuration, currentTime ,setMusicDuration, setCurrentTime,  audioRef, isPlaying, togglePlayPause, playSong, currentSong, setCurrentSong,  setIsPlaying, Latest, TopArtists, isOpen, toggleDrawer, isArtistOpen, isCategoryOpen, toggleArtistDrawer, toggleCategoryDrawer}}>
+    <PlayerContext.Provider value={{ audioQuality, setAudioQuality,  pausedTime, setPausedTime,  musicDuration, currentTime ,setMusicDuration, setCurrentTime,  audioRef, isPlaying, togglePlayPause, playSong, currentSong, setCurrentSong,  setIsPlaying, Latest, TopArtists, isOpen, toggleDrawer, isArtistOpen, isCategoryOpen, toggleArtistDrawer, toggleCategoryDrawer}}>
       {children}
     </PlayerContext.Provider>
   );

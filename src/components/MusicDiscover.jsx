@@ -18,6 +18,15 @@ import box from '../assets/box.json'
 import Sleep from './Sleep';
 import Animation from './Animation';
 
+let myFavorites = [];
+
+
+
+// offline music settings
+import { openDB } from 'idb';
+
+
+
 const MusicDiscover = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [songs, setSongs] = useState([]);
@@ -28,7 +37,7 @@ const MusicDiscover = () => {
   const [artistSongs, setArtistSongs] = useState([]);
   const [isPlayerVisible, setIsPlayerVisible] = useState(false);
   
-  const {pausedTime, setPausedTime, currentSong, setCurrentSong,  musicDuration, currentTime, setMusicDuration, setCurrentTime,  audioRef, isPlaying, setIsPlaying, playSong, Latest, isOpen, toggleDrawer, TopArtists, isArtistOpen, toggleArtistDrawer, isCategoryOpen, toggleCategoryDrawer } = usePlayer();
+  const {audioQuality, setAudioQuality, pausedTime, setPausedTime, currentSong, setCurrentSong,  musicDuration, currentTime, setMusicDuration, setCurrentTime,  audioRef, isPlaying, setIsPlaying, playSong, Latest, isOpen, toggleDrawer, TopArtists, isArtistOpen, toggleArtistDrawer, isCategoryOpen, toggleCategoryDrawer } = usePlayer();
   const [isLoading, setIsLoading] = useState(false);
    const [progress, setProgress] = useState(0)
   
@@ -39,11 +48,134 @@ const MusicDiscover = () => {
  
   const [songUrl, setSongUrl] = useState(null);
   const base_url = import.meta.env.VITE_API_URL;
-  
-  
- 
+
+  const qualities = [
+    { id: 0, label: 'Poor Quality' },
+    { id: 1, label: 'Low Quality' },
+    { id: 2, label: 'Medium Quality' },
+    { id: 3, label: 'High Quality' },
+  ];
+
+  const handleQualityChange = (id) => {
+    setAudioQuality(id);
+    localStorage.setItem('quality', id);
+  };
+
+  const isChecked = (id) => audioQuality === id;
 
 
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+ // offline mode
+ const dbPromise = openDB('musicAppDB', 1, {
+  upgrade(db) {
+    if (!db.objectStoreNames.contains('songs')) {
+      db.createObjectStore('songs', { keyPath: 'id' }); // Create a store for songs with 'id' as the key
+    }
+  },
+});
+
+
+async function saveSongToIndexedDB(song) {
+  const db = await dbPromise;
+  try {
+    await db.add('songs', song);
+    console.log(`Saved ${song.name} for offline use!`);
+  } catch (error) {
+    console.error('Error saving the song to IndexedDB:', error);
+  }
+}
+ const [offlineSongs, setOfflineSongs] = useState([])
+ async function fetchSongsFromIndexedDB() {
+  const db = await dbPromise;
+  try {
+    const songs = await db.getAll('songs');
+    console.log('Fetched songs from IndexedDB:', songs);
+    //return songs; // Returns an array of songs
+    setOfflineSongs(songs); // Set the state with the fetched songs
+  } catch (error) {
+    console.error('Error fetching songs from IndexedDB:', error);
+    return [];
+  }
+}
+ useEffect(() => {
+  fetchSongsFromIndexedDB()
+  
+ }, [])
+
+ async function playOfflineSongs(song) {
+  try {
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    }
+
+      console.log(`Playing offline: ${song.name} by ${song.primaryArtists}`);
+      // Example: Create an audio element to play the Blob
+      const audioUrl = URL.createObjectURL(song.audioBlob);
+     // const audio = new Audio(audioUrl);
+    //  audio.play();
+    setCurrentSong({ ...song, downloadUrl: audioUrl }); // Update the state with the Blob URL
+    setIsPlaying(true);
+    
+  } catch (error) {
+    console.error('Error fetching offline songs:', error);
+  }
+}
+
+
+
+const handleSaveOffline = async (song) => {
+  const fileUrl = song.downloadUrl[audioQuality].link;
+
+  try {
+    const response = await fetch(fileUrl);
+    const blob = await response.blob();
+
+    // Add metadata along with the Blob
+    const songData = {
+      id: song.id, // Unique identifier
+      name: song.name,
+      primaryArtists: song.primaryArtists,
+      image: song.image[2].link, // Optional: Thumbnail image URL
+      audioBlob: blob, // The audio file as a Blob
+    };
+
+    // Save to IndexedDB
+    await saveSongToIndexedDB(songData);
+  } catch (error) {
+    console.error('Error saving the song to IndexedDB:', error);
+  }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  useEffect(()=> {
+    if (myFavorites.length == 0) {
+      const fetchDataFromLocalStorage = localStorage.getItem('last_played');
+      if (fetchDataFromLocalStorage) {
+        const fetchedSongs = JSON.parse(fetchDataFromLocalStorage);
+        myFavorites = fetchedSongs;
+        
+      }
+    }
+  }, []);
+  
   // implimenting dark mode
   const [darkMode, setDarkMode] = useState(() => {
     // Check localStorage to see if dark mode is already enabled
@@ -149,37 +281,95 @@ const formatTime = (time) => {
   }, [audioRef.current]);
 
   
-    useEffect(() => {
-      if (isPlaying && currentSong) {
-        audioRef.current.src = currentSong.downloadUrl;
-        audioRef.current.play().catch((error) => console.error('Error playing audio:', error));
+ 
+
+    // Function to play offline songs
+
+
+// useEffect to handle playback logic
+useEffect(() => {
+  let blobUrl;
+
+  if (isPlaying && currentSong) {
+    try {
+      let sourceUrl;
+      
+
+     // console.log('currentSong:', currentSong); // Check the structure of currentSong
+     // console.log('downloadUrl:', currentSong.downloadUrl); // Check if downloadUrl is present
+      //console.log('audioBlob:', currentSong.audioBlob); // Check if audioBlob is present
+
+      // Check if the song has a downloadUrl (URL-based source)
+      if (currentSong.downloadUrl && typeof currentSong.downloadUrl === 'string') {
+        if (currentSong.downloadUrl.startsWith('blob:')) {
+          // If it's a Blob URL, use it directly
+          sourceUrl = currentSong.downloadUrl;
+        } else {
+          // For normal URLs, use the downloadUrl
+          sourceUrl = currentSong.downloadUrl;
+        }
+      } else if (currentSong.audioBlob) {
+        // For offline songs with audioBlob, create a URL from the Blob
+        blobUrl = URL.createObjectURL(currentSong.audioBlob);
+        sourceUrl = blobUrl;
+        console.log(currentSong)
       } else {
-        audioRef.current.pause();
+        throw new Error('Invalid audio source.');
       }
-    }, [isPlaying, currentSong]);
-  
-    useEffect(() => {
-      const handleTimeUpdate = () => {
-        const progress = (audioRef.current.currentTime / audioRef.current.duration) * 100 || 0;
-        setProgress(progress);
-      };
-  
-      audioRef.current.addEventListener('timeupdate', handleTimeUpdate);
-  
-      return () => {
-        audioRef.current.removeEventListener('timeupdate', handleTimeUpdate);
-      };
-    }, [currentSong]);
-  
+
+      // Set the audio source and play
+      audioRef.current.src = sourceUrl;
+      audioRef.current
+        .play()
+        .then(() => console.log('Playing audio'))
+        .catch((error) => console.error('Error playing audio:', error));
+    } catch (error) {
+      console.error('Error setting audio source:', error);
+    }
+  } else {
+    // Pause the audio if not playing
+    audioRef.current.pause();
+  }
+
+  // Cleanup Blob URL on unmount or song change
+  return () => {
+    if (blobUrl) {
+      URL.revokeObjectURL(blobUrl);
+      blobUrl = null;
+    }
+    // Ensure audio is reset
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = '';
+    }
+  };
+}, [isPlaying, currentSong]);
+
+
+
+
+     
    
   
     const handleSongClick = (song) => {
+      
       const formattedSong = {
         title: song.name,
         name: song.primaryArtists,
         albumArt: song.image[2].link,
-        downloadUrl: song.downloadUrl[2].link,  // Ensure this link exists
+        downloadUrl: song.downloadUrl[audioQuality].link,  // Ensure this link exists
       };
+      if (song) {
+        if (myFavorites.length >= 5) {
+          
+          myFavorites.shift()
+        }
+        myFavorites.push(song)
+        localStorage.setItem('last_played', JSON.stringify(myFavorites));
+        
+      //  handleSaveOffline(song)
+
+      }
     
       setCurrentSong(formattedSong);  // Set the new song
       playSong(formattedSong);  // Start playing the song
@@ -187,33 +377,62 @@ const formatTime = (time) => {
       setSongUrl(formattedSong.downloadUrl);
     };
     
+    
 
 
-    const togglePlayPause = (url) => {
-      if (isPlaying && audioRef.current.src === url) {
-        // Store the current time before pausing
-        console.log(audioRef.current)
+    const togglePlayPause = (song) => {
+      let sourceUrl;
+    
+      // For online songs, use the download URL
+      if (song.downloadUrl && typeof song.downloadUrl === 'string') {
+        sourceUrl = song.downloadUrl;
+      } else if (song.audioBlob && song.audioBlob instanceof Blob) {
+        // For offline songs, create a URL from the audioBlob
+        sourceUrl = URL.createObjectURL(song.audioBlob);
+      } else {
+        console.error('Invalid audio source.');
+        return;
+      }
+    
+      // Set the player visibility when a song starts
+      setIsPlayerVisible(true);
+      setCurrentSong(song); // Update the currentSong state
+    
+      const isSameSong = audioRef.current.src === sourceUrl;
+    
+      if (isPlaying && isSameSong) {
+        // If the song is playing, pause it and save the current time
         setPausedTime(audioRef.current.currentTime);
         audioRef.current.pause();
         setIsPlaying(false);
       } else {
-        // If it's the same song, resume from the paused time
-        if (audioRef.current.src === url) {
-          audioRef.current.currentTime = pausedTime;
-        } else {
-          // For a new song, start from the beginning
-          setPausedTime(0); // Reset the paused time for new song
-          setCurrentSong({
-            ...currentSong,
-            downloadUrl: url,
-          });
-          playSong(url);
-        }
+        // If it's a new song or we are resuming, handle accordingly
+        if (!isSameSong) {
+          setPausedTime(0); // Reset the paused time if it's a new song
     
-        audioRef.current.play();
-        setIsPlaying(true);
+          // Set the audio source and play the audio
+          audioRef.current.src = sourceUrl;
+          audioRef.current.play()
+            .then(() => {
+              console.log('Playing audio');
+            })
+            .catch((error) => {
+              console.error('Error playing audio:', error);
+            });
+    
+          setIsPlaying(true);
+        } else {
+          // If it's the same song, resume from the paused time
+          audioRef.current.currentTime = pausedTime;
+          audioRef.current.play();
+          setIsPlaying(true);
+        }
       }
     };
+    
+    
+    
+    
     
   
     const handleProgressChange = (e) => {
@@ -400,7 +619,8 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
 
   return (
     <div className="flex flex-col items-center justify-between min-h-screen px-4 py-2 bg-gray-50 dark:text-slate-400 dark:bg-zinc-900">
-     
+    
+    
       <div className="w-full max-w-md">
         <div className='w-full overflow-x-auto sticky top-0 bg-gray-50  dark:text-slate-400 dark:bg-zinc-900' >
 
@@ -423,17 +643,15 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
   </div>
 
   {/* Right side: Dark Mode Button */}
+  
   <button
-  onClick={() => setDarkMode(!darkMode)}
+  onClick={() => setIsPlayerVisible(false)}
+  type="button" data-drawer-target="drawer-right-example" data-drawer-show="drawer-right-example" data-drawer-placement="right" aria-controls="drawer-right-example"
+  
   className="rounded-full z-50 border-0 px-3 py-2 text-sm font-medium text-slate-700 bg-gray-300 dark:bg-slate-800 dark:text-yellow-400 transition-all duration-700"
 >
-  <i
-    className={`${
-      darkMode ? "fa-regular fa-sun" : "fa-solid fa-moon"
-    } transform transition-transform duration-700 ease-in-out ${
-      darkMode ? "rotate-180 scale-110" : "rotate-0 scale-100"
-    }`}
-  ></i>
+
+  <i className="fa-solid fa-ellipsis-vertical"></i>
 </button>
 
 </div>
@@ -484,6 +702,15 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
           >
             Categories
           </span>
+
+           <span
+            onClick={() => {setActiveTab('Offline'),  setIsPlayerVisible(false)} }
+            className={`hidden cursor-pointer ${activeTab === 'Offline' ? 'border-b-2 border-yellow-400' : 'text-gray-400 hover:text-gray-800'}`}
+          >
+            Offline
+          </span>
+
+        
           
         </div>
         {activeTab === 'Songs' && (
@@ -502,10 +729,10 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
           />
           <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center w-full bg-gray-900 bg-opacity-50 h-9 rounded-b-lg">
             <button
-              onClick={() => togglePlayPause(song.downloadUrl[2].link)}
+              onClick={() => togglePlayPause(song.downloadUrl[audioQuality].link)}
               className="text-gray-400 cursor-pointer"
             >
-              {isPlaying && audioRef.current.src === song.downloadUrl[2].link ? <FaPause /> : <FaPlay />}
+              {isPlaying && audioRef.current.src === song.downloadUrl[audioQuality].link ? <FaPause /> : <FaPlay />}
             </button>
           </div>
         </div>
@@ -545,10 +772,10 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
                     </div>
                   </div>
                   <button
-                    onClick={() => {togglePlayPause(song.downloadUrl[1].link), handleSongClick(song)}}
+                    onClick={() => {togglePlayPause(song.downloadUrl[audioQuality].link), handleSongClick(song)}}
                     className="text-gray-400 cursor-pointer"
                   >
-                    {isPlaying && audioRef.current.src === song.downloadUrl[1].link ? <FaPause /> : <FaPlay />}
+                    {isPlaying && audioRef.current.src === song.downloadUrl[audioQuality].link ? <FaPause /> : <FaPlay />}
                   </button>
                 </li>
               )) : <Loader />}
@@ -573,10 +800,10 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
           />
           <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center w-full bg-gray-900 bg-opacity-50 h-9 rounded-b-lg">
             <button
-              onClick={() => togglePlayPause(song.downloadUrl[2].link)}
+              onClick={() => togglePlayPause(song.downloadUrl[audioQuality].link)}
               className="text-gray-400 cursor-pointer"
             >
-              {isPlaying && audioRef.current.src === song.downloadUrl[2].link ? <FaPause /> : <FaPlay />}
+              {isPlaying && audioRef.current.src === song.downloadUrl[audioQuality].link ? <FaPause /> : <FaPlay />}
             </button>
           </div>
         </div>
@@ -633,10 +860,10 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
                       </div>
                     </div>
                     <button
-                      onClick={() => togglePlayPause(song.downloadUrl[2].link)}
+                      onClick={() => togglePlayPause(song.downloadUrl[audioQuality].link)}
                       className="text-gray-400 cursor-pointer"
                     >
-                      {isPlaying && audioRef.current.src === song.downloadUrl[2].link ? <FaPause /> : <FaPlay />}
+                      {isPlaying && audioRef.current.src === song.downloadUrl[audioQuality].link ? <FaPause /> : <FaPlay />}
                     </button>
                   </li>
                 )) : <Loader />}
@@ -727,10 +954,10 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
                </div>
              </div>
              <button
-                    onClick={() => togglePlayPause(song.downloadUrl[2].link)}
+                    onClick={() => togglePlayPause(song.downloadUrl[audioQuality].link)}
                     className="text-gray-400 cursor-pointer"
                   >
-                    {isPlaying && audioRef.current.src === song.downloadUrl[2].link ? <FaPause /> : <FaPlay />}
+                    {isPlaying && audioRef.current.src === song.downloadUrl[audioQuality].link ? <FaPause /> : <FaPlay />}
                   </button>
 
            </li>
@@ -825,10 +1052,10 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
             </div>
 
             <button
-              onClick={() => togglePlayPause(song.downloadUrl[2].link)}
+              onClick={() => togglePlayPause(song.downloadUrl[audioQuality].link)}
               className="text-gray-400 cursor-pointer"
             >
-              {isPlaying && audioRef.current.src === song.downloadUrl[2].link ? (
+              {isPlaying && audioRef.current.src === song.downloadUrl[audioQuality].link ? (
                 <FaPause />
               ) : (
                 <FaPlay />
@@ -849,9 +1076,166 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
 
             </div>
         )}
+
+      {/*
+        {activeTab === 'Offline' && (
+       <li>
+           <button
+             type="button"
+             className="flex items-center w-full p-2 text-base text-gray-900 transition duration-75 rounded-lg group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+           >
+             <span className="flex-1 ms-3 text-left rtl:text-right whitespace-nowrap">
+               Last Played
+             </span>
+             <span className="inline-flex me-2 items-center justify-center w-3 h-3 p-3 ms-3 text-sm font-medium text-blue-800 bg-blue-100 rounded-full dark:bg-blue-900 dark:text-blue-300">
+               {offlineSongs.length}
+             </span>
+             <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
+               <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 4 4 4-4" />
+             </svg>
+           </button>
+           <ul id="dropdown-example" className={`${isDropdownOpen ? '' : 'hidden'} py-2 space-y-2`}>
+             {offlineSongs.length > 0 &&
+               offlineSongs.map((song, index) => (
+                 <li
+                   key={index}
+                   className="flex items-center justify-start ps-4 cursor-pointer"
+                   onClick={() => togglePlayPause(song)}
+                 >
+                   <img src={song.image || song.albumArt} alt="" className="w-11 rounded-sm" />
+                   <a
+                     className="flex items-center w-full p-2 text-gray-900 transition duration-75 rounded-lg pl-11 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                   >
+                     {song.name}
+                   </a>
+                 </li>
+               ))}
+           </ul>
+       </li>
+       )}*/}
       </div>
 
       {/* Player Container */}
+      
+
+
+
+
+
+<div id="drawer-right-example" className="fixed top-0 right-0 z-40 h-screen p-4 overflow-y-auto transition-transform translate-x-full bg-white w-80 dark:bg-gray-800" tabIndex="-1" aria-labelledby="drawer-right-label">
+    <h5 id="drawer-right-label" className="inline-flex items-center mb-4 text-base font-semibold text-gray-500 dark:text-gray-400"><svg className="w-4 h-4 me-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+    <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"/>
+  </svg>Manage </h5>
+   <button type="button" data-drawer-hide="drawer-right-example" aria-controls="drawer-right-example" className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 absolute top-2.5 end-2.5 inline-flex items-center justify-center dark:hover:bg-gray-600 dark:hover:text-white" >
+      <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+         <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+      </svg>
+      <span className="sr-only">Close menu</span>
+   </button>
+  
+
+
+   <div className="py-4 overflow-y-auto">
+      <ul className="space-y-2 font-medium">
+         <li >
+            <a href="#" className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
+               <svg className="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 22 21">
+                  <path d="M16.975 11H10V4.025a1 1 0 0 0-1.066-.998 8.5 8.5 0 1 0 9.039 9.039.999.999 0 0 0-1-1.066h.002Z"/>
+                  <path d="M12.5 0c-.157 0-.311.01-.565.027A1 1 0 0 0 11 1.02V10h8.975a1 1 0 0 0 1-.935c.013-.188.028-.374.028-.565A8.51 8.51 0 0 0 12.5 0Z"/>
+               </svg>
+               <span className="ms-3">Dashboard</span>
+            </a>
+         </li>
+         <li>
+          
+         <button type="button" className="flex items-center w-full p-2 text-base text-gray-900 transition duration-75 rounded-lg group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700" aria-controls="dropdown-example" data-collapse-toggle="dropdown-example">
+                  <span className="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white">
+                    <i className="fa-solid fa-music"></i>
+                  </span>
+                  
+                  <span className="flex-1 ms-3 text-left rtl:text-right whitespace-nowrap">Audio Quality</span>
+                  <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
+                     <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 4 4 4-4"/>
+                  </svg>
+            </button>
+            <ul id="dropdown-example" className="hidden py-2 space-y-2">
+            {qualities.map((quality) => (
+        <li key={quality.id}>
+          <a
+            href="#"
+            onClick={() => handleQualityChange(quality.id)}
+            className="flex items-center w-full p-2 text-gray-900 transition duration-75 rounded-lg pl-11 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex items-center h-5">
+                <input
+                  id={`helper-radio-${quality.id}`}
+                  name="helper-radio"
+                  type="radio"
+                  value={quality.id}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
+                  checked={isChecked(quality.id)}
+                  readOnly
+                />
+              </div>
+              <div className="ms-2 text-sm">
+                <label
+                  htmlFor={`helper-radio-${quality.id}`}
+                  className="text-gray-900 dark:text-gray-300"
+                >
+                  <div className="font-semibold text-md">{quality.label}</div>
+                </label>
+              </div>
+            </div>
+          </a>
+        </li>
+      ))}
+                 
+                
+            </ul>
+ 
+            
+         </li>
+        
+         <li className='hidden'>
+            <a href="#" className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
+               <svg className="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="m17.418 3.623-.018-.008a6.713 6.713 0 0 0-2.4-.569V2h1a1 1 0 1 0 0-2h-2a1 1 0 0 0-1 1v2H9.89A6.977 6.977 0 0 1 12 8v5h-2V8A5 5 0 1 0 0 8v6a1 1 0 0 0 1 1h8v4a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-4h6a1 1 0 0 0 1-1V8a5 5 0 0 0-2.582-4.377ZM6 12H4a1 1 0 0 1 0-2h2a1 1 0 0 1 0 2Z"/>
+               </svg>
+               <span className="flex-1 ms-3 whitespace-nowrap">Inbox</span>
+               <span className="inline-flex items-center justify-center w-3 h-3 p-3 ms-3 text-sm font-medium text-blue-800 bg-blue-100 rounded-full dark:bg-blue-900 dark:text-blue-300">3</span>
+            </a>
+         </li>
+         
+         <li>
+            <a href="#" className="flex items-center p-2 gap-3 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
+               <svg className="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M5 5V.13a2.96 2.96 0 0 0-1.293.749L.879 3.707A2.96 2.96 0 0 0 .13 5H5Z"/>
+                  <path d="M6.737 11.061a2.961 2.961 0 0 1 .81-1.515l6.117-6.116A4.839 4.839 0 0 1 16 2.141V2a1.97 1.97 0 0 0-1.933-2H7v5a2 2 0 0 1-2 2H0v11a1.969 1.969 0 0 0 1.933 2h12.134A1.97 1.97 0 0 0 16 18v-3.093l-1.546 1.546c-.413.413-.94.695-1.513.81l-3.4.679a2.947 2.947 0 0 1-1.85-.227 2.96 2.96 0 0 1-1.635-3.257l.681-3.397Z"/>
+                  <path d="M8.961 16a.93.93 0 0 0 .189-.019l3.4-.679a.961.961 0 0 0 .49-.263l6.118-6.117a2.884 2.884 0 0 0-4.079-4.078l-6.117 6.117a.96.96 0 0 0-.263.491l-.679 3.4A.961.961 0 0 0 8.961 16Zm7.477-9.8a.958.958 0 0 1 .68-.281.961.961 0 0 1 .682 1.644l-.315.315-1.36-1.36.313-.318Zm-5.911 5.911 4.236-4.236 1.359 1.359-4.236 4.237-1.7.339.341-1.699Z"/>
+               </svg>
+               <button
+  
+                onClick={() =>  setDarkMode(!darkMode)}
+                className="rounded-full z-50 border-0 px-3 py-2 text-sm font-medium text-slate-700 bg-gray-300 dark:bg-slate-800 dark:text-yellow-400 transition-all duration-700">
+                  <i
+                   className={`${
+                   darkMode ? "fa-regular fa-sun" : "fa-solid fa-moon"
+                   } transform transition-transform duration-700 ease-in-out ${
+                   darkMode ? "rotate-180 scale-110" : "rotate-0 scale-100"
+                   }`}
+                  ></i>
+  
+              </button>
+            </a>
+         </li>
+      </ul>
+   </div>
+
+
+</div>
+
      
 
       <div  {...swipeHandlers}
@@ -863,107 +1247,88 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
   }}
   className="fixed bottom-0 w-full max-w-md px-4 bg-white rounded-t-xl shadow-md dark:text-slate-400 dark:bg-zinc-900"
 >
-  {currentSong && (
-    <>
-      <div className="flex items-center justify-start mt-2">
-        <button
-          onClick={() => setIsPlayerVisible(false)}
-          className="w-10 h-10 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700 ml-2"
+{currentSong && (
+  <>
+    <div className="flex items-center justify-start mt-2">
+      <button
+        onClick={() => setIsPlayerVisible(false)}
+        className="w-10 h-10 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700 ml-2"
+      >
+        <i className="fa-solid fa-chevron-down"></i>
+      </button>
+    </div>
+    <div className="flex flex-col items-center py-4">
+      <div className="flip-card w-72 h-72 rounded-lg shadow-lg">
+        <div
+          className={`flip-card-inner w-72 h-72 rounded-lg shadow-lg ${isFlipped ? 'rotate' : 'rotate-back'}`}
         >
-          <i className="fa-solid fa-chevron-down"></i>
-        </button>
-      </div>
-      <div className="flex flex-col items-center py-4">
-        <div className="flip-card w-72 h-72 rounded-lg shadow-lg">
+          {/* Front of the flip card */}
           <div
-            className={`flip-card-inner w-72 h-72 rounded-lg shadow-lg ${
-              isFlipped ? 'rotate' : 'rotate-back'
-            }`}
+            className="flip-card-front w-72 h-72 rounded-lg shadow-lg"
+            onClick={() => setIsFlipped(true)}
           >
-            {/* Front of the flip card */}
-            <div
-              className="flip-card-front w-72 h-72 rounded-lg shadow-lg"
-              onClick={() => setIsFlipped(true)}
-            >
-              <img
-                src={currentSong.albumArt}
-                alt="Album Art"
-                className="w-100 h-100 rounded-lg shadow-lg img cursor-pointer"
-              />
-            </div>
-
-            {/* Back of the flip card */}
-            <div className="flip-card-back w-72 h-72 rounded-lg shadow-lg"  onClick={() => setIsFlipped(false)}>
-             
-              
-            </div>
+            <img
+              src={currentSong.albumArt}
+              alt="Album Art"
+              className="w-100 h-100 rounded-lg shadow-lg img cursor-pointer"
+            />
           </div>
+
+          {/* Back of the flip card */}
+          <div className="flip-card-back w-72 h-72 rounded-lg shadow-lg" onClick={() => setIsFlipped(false)} />
         </div>
+      </div>
 
-       
+      <h3 className="text-2xl font-bold">{currentSong.title}</h3>
+      <p className="text-gray-500" onClick={() => { setSearchQuery(currentSong.name); setIsPlayerVisible(false); }}>
+        {currentSong.name}
+      </p>
 
-        <h3 className="text-2xl font-bold">{currentSong.title}</h3>
-        <p className="text-gray-500" onClick={() => {
-           setSearchQuery(currentSong.name)
-           setIsPlayerVisible(false)}
-        } >{currentSong.name}</p>
-
-        <div className="flex justify-between w-full mt-4">
-
+      <div className="flex justify-between w-full mt-4">
         <button
           style={{ paddingLeft: '12px', display: 'flex', alignItems: 'center' }}
           onClick={() => handleDownload(currentSong)}
-          className="w-10 h-10 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700">
-            <i className="fa-solid fa-download"></i>
-          </button>
+          className="w-10 h-10 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700"
+        >
+          <i className="fa-solid fa-download"></i>
+        </button>
 
-       
-          <button
-  style={{ paddingLeft: '12px' }}
-  onClick={() => {
-    // Toggle play/pause and update the audio state
-    if (isPlaying) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play();
-    }
-    setIsPlaying(!isPlaying); // Toggle the playing state
-  }}
-  className="w-10 h-10 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700"
->
-  {isPlaying ? <FaPause /> : <FaPlay />}
-</button>
+        <button
+          style={{ paddingLeft: '12px' }}
+          onClick={() => togglePlayPause(currentSong)}
+          className="w-10 h-10 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700"
+        >
+          {isPlaying ? <FaPause /> : <FaPlay />}
+        </button>
 
-        
-          <button
-            style={{ paddingLeft: '12px' }}
-            onClick={handleMuteToggle}
-            className="w-10 h-10 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700"
-          >
-            {isMuted ? <MdOutlineVolumeOff /> : <MdOutlineVolumeUp />}
-          </button>
-
-        
-        </div>
-
-        <label className="w-full flex mt-2 items-center justify-center gap-1 px-1">
-          <span className="currentTime">{formatTime(currentTime)}</span>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            value={progress}
-            onChange={handleProgressChange}
-            className="w-10/12 h-1 bg-gray-200 rounded-lg appearance-none thumb cursor-pointer"
-            style={{
-              background: `linear-gradient(to right, #fad0c4 ${progress}%, #e5e7eb ${progress}%)`,
-            }}
-          />
-          <span className="musicDuration">{formatTime(musicDuration)}</span>
-        </label>
+        <button
+          style={{ paddingLeft: '12px' }}
+          onClick={handleMuteToggle}
+          className="w-10 h-10 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700"
+        >
+          {isMuted ? <MdOutlineVolumeOff /> : <MdOutlineVolumeUp />}
+        </button>
       </div>
-    </>
-  )}
+
+      <label className="w-full flex mt-2 items-center justify-center gap-1 px-1">
+        <span className="currentTime">{formatTime(currentTime)}</span>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value={progress}
+          onChange={handleProgressChange}
+          className="w-10/12 h-1 bg-gray-200 rounded-lg appearance-none thumb cursor-pointer"
+          style={{
+            background: `linear-gradient(to right, #fad0c4 ${progress}%, #e5e7eb ${progress}%)`,
+          }}
+        />
+        <span className="musicDuration">{formatTime(musicDuration)}</span>
+      </label>
+    </div>
+  </>
+)}
+
       </div>
       
 
