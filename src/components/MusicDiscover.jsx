@@ -20,6 +20,10 @@ import Animation from './Animation';
 
 let myFavorites = [];
 
+
+
+
+
 const MusicDiscover = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [songs, setSongs] = useState([]);
@@ -59,16 +63,24 @@ const MusicDiscover = () => {
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
- 
- const modal = useRef(null);
-
-    const toggleModal = () => {
-      if (modal.current) {
-        modal.current.classList.toggle('transform-none');
-        modal.current.classList.toggle('translate-x-full');
-
-      }
+  const modal = useRef(null);
+  const showModal = () => {
+    if (modal.current) {
+      modal.current.classList.remove('translate-x-full');
+      modal.current.classList.add('transform-none');
     }
+   
+  }
+
+  const hideModal = () => {
+    if (modal.current) {
+      modal.current.classList.remove('transform-none');
+      modal.current.classList.add('translate-x-full');
+    }
+  }
+
+ 
+
 
 
 
@@ -559,10 +571,9 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
   {/* Right side: Dark Mode Button */}
   
   <button
-  onClick={() => { setIsPlayerVisible(false);
-    toggleModal()
-  }
-  }
+  onClick={() => {setIsPlayerVisible(false); 
+    showModal()
+  }}
   type="button" data-drawer-target="drawer-right-example" data-drawer-show="drawer-right-example" data-drawer-placement="right" aria-controls="drawer-right-example"
   
   className="rounded-full z-50 border-0 px-3 py-2 text-sm font-medium text-slate-700 bg-gray-300 dark:bg-slate-800 dark:text-yellow-400 transition-all duration-700"
@@ -1040,11 +1051,11 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
 
 
 
-<div ref={modal}  id="drawer-right-example" className="fixed top-0 right-0 z-40 h-screen p-4 overflow-y-auto transition-transform translate-x-full bg-white w-80 dark:bg-gray-800" tabIndex="-1" aria-labelledby="drawer-right-label">
+<div ref={modal} id="drawer-right-example" className="fixed top-0 right-0 z-40 h-screen p-4 overflow-y-auto transition-transform translate-x-full bg-white w-80 dark:bg-gray-800" tabIndex="-1" aria-labelledby="drawer-right-label">
     <h5 id="drawer-right-label" className="inline-flex items-center mb-4 text-base font-semibold text-gray-500 dark:text-gray-400"><svg className="w-4 h-4 me-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
     <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"/>
   </svg>Manage </h5>
-   <button type="button" data-drawer-hide="drawer-right-example" aria-controls="drawer-right-example" className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 absolute top-2.5 end-2.5 inline-flex items-center justify-center dark:hover:bg-gray-600 dark:hover:text-white" >
+   <button onClick={hideModal} type="button" data-drawer-hide="drawer-right-example" aria-controls="drawer-right-example" className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 absolute top-2.5 end-2.5 inline-flex items-center justify-center dark:hover:bg-gray-600 dark:hover:text-white" >
       <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
          <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
       </svg>
