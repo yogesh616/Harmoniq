@@ -64,12 +64,12 @@ const MusicDiscover = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const modal = useRef(null);
+
   const showModal = () => {
     if (modal.current) {
       modal.current.classList.remove('translate-x-full');
       modal.current.classList.add('transform-none');
     }
-   
   }
 
   const hideModal = () => {
@@ -79,16 +79,14 @@ const MusicDiscover = () => {
     }
   }
 
- 
+  const qualityRef = useRef(null);
 
-
-
-
-
-
-
-
-
+  const toggleQualityRef = () => {
+      
+      if (qualityRef.current) {
+        qualityRef.current.classList.toggle('hidden')
+      }
+  }
 
 
   useEffect(()=> {
@@ -1077,7 +1075,7 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
          </li>
          <li>
           
-         <button type="button" className="flex items-center w-full p-2 text-base text-gray-900 transition duration-75 rounded-lg group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700" aria-controls="dropdown-example" data-collapse-toggle="dropdown-example">
+         <button onClick={toggleQualityRef} type="button" className="flex items-center w-full p-2 text-base text-gray-900 transition duration-75 rounded-lg group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700" aria-controls="dropdown-example" data-collapse-toggle="dropdown-example">
                   <span className="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white">
                     <i className="fa-solid fa-music"></i>
                   </span>
@@ -1087,13 +1085,13 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
                      <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 4 4 4-4"/>
                   </svg>
             </button>
-            <ul id="dropdown-example" className="hidden py-2 space-y-2">
+            <ul ref={qualityRef} id="dropdown-example" className="hidden py-2 space-y-2">
             {qualities.map((quality) => (
         <li key={quality.id}>
           <a
             href="#"
             onClick={() => handleQualityChange(quality.id)}
-            className="flex items-center w-full p-2 text-gray-900 transition duration-75 rounded-lg pl-11 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+            className="flex items-center w-full p-2 text-gray-900 transition-all duration-75 rounded-lg pl-11 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
           >
             <div className="flex items-center gap-3">
               <div className="flex items-center h-5">
