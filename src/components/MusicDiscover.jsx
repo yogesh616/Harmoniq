@@ -20,12 +20,6 @@ import Animation from './Animation';
 
 let myFavorites = [];
 
-
-
-
-
-
-
 const MusicDiscover = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [songs, setSongs] = useState([]);
