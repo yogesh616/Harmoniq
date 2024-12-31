@@ -22,10 +22,6 @@ let myFavorites = [];
 
 
 
-// offline music settings
-import { openDB } from 'idb';
-
-
 
 const MusicDiscover = () => {
   const [searchQuery, setSearchQuery] = useState('');
