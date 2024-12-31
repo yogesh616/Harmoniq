@@ -22,8 +22,7 @@ let myFavorites = [];
 
 
 
-// offline music settings
-import { openDB } from 'idb';
+
 
 
 
@@ -66,94 +65,7 @@ const MusicDiscover = () => {
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
- // offline mode
- const dbPromise = openDB('musicAppDB', 1, {
-  upgrade(db) {
-    if (!db.objectStoreNames.contains('songs')) {
-      db.createObjectStore('songs', { keyPath: 'id' }); // Create a store for songs with 'id' as the key
-    }
-  },
-});
-
-
-async function saveSongToIndexedDB(song) {
-  const db = await dbPromise;
-  try {
-    await db.add('songs', song);
-    console.log(`Saved ${song.name} for offline use!`);
-  } catch (error) {
-    console.error('Error saving the song to IndexedDB:', error);
-  }
-}
- const [offlineSongs, setOfflineSongs] = useState([])
- async function fetchSongsFromIndexedDB() {
-  const db = await dbPromise;
-  try {
-    const songs = await db.getAll('songs');
-    console.log('Fetched songs from IndexedDB:', songs);
-    //return songs; // Returns an array of songs
-    setOfflineSongs(songs); // Set the state with the fetched songs
-  } catch (error) {
-    console.error('Error fetching songs from IndexedDB:', error);
-    return [];
-  }
-}
- useEffect(() => {
-  fetchSongsFromIndexedDB()
-  
- }, [])
-
- async function playOfflineSongs(song) {
-  try {
-    if (isPlaying) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-    }
-
-      console.log(`Playing offline: ${song.name} by ${song.primaryArtists}`);
-      // Example: Create an audio element to play the Blob
-      const audioUrl = URL.createObjectURL(song.audioBlob);
-     // const audio = new Audio(audioUrl);
-    //  audio.play();
-    setCurrentSong({ ...song, downloadUrl: audioUrl }); // Update the state with the Blob URL
-    setIsPlaying(true);
-    
-  } catch (error) {
-    console.error('Error fetching offline songs:', error);
-  }
-}
-
-
-
-const handleSaveOffline = async (song) => {
-  const fileUrl = song.downloadUrl[audioQuality].link;
-
-  try {
-    const response = await fetch(fileUrl);
-    const blob = await response.blob();
-
-    // Add metadata along with the Blob
-    const songData = {
-      id: song.id, // Unique identifier
-      name: song.name,
-      primaryArtists: song.primaryArtists,
-      image: song.image[2].link, // Optional: Thumbnail image URL
-      audioBlob: blob, // The audio file as a Blob
-    };
-
-    // Save to IndexedDB
-    await saveSongToIndexedDB(songData);
-  } catch (error) {
-    console.error('Error saving the song to IndexedDB:', error);
-  }
-};
-
-
-
-
-
-
-
+ 
 
 
 
