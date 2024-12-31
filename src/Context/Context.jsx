@@ -710,6 +710,11 @@ const [musicDuration, setMusicDuration] = useState(0);
 const [currentTime, setCurrentTime] = useState(0);
 const [pausedTime, setPausedTime] = useState(0);
 
+  const [audioQuality, setAudioQuality] = useState(() => {
+  const getAudioQuality = localStorage.getItem('quality');
+  return getAudioQuality ? parseInt(getAudioQuality, 10) : 2;
+});
+
 const toggleArtistDrawer = () => {
   setIsArtistOpen(!isArtistOpen)
 }
