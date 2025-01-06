@@ -13,7 +13,7 @@ import './flip.css';
 //import Lottie from 'react-lottie'
 import person from '../assets/person.json'
 import { useSwipeable } from 'react-swipeable';
-
+import './playlist.css'
 import box from '../assets/box.json'
 import Sleep from './Sleep';
 import Animation from './Animation';
@@ -22,6 +22,12 @@ let myFavorites = [];
 
 
 
+// Google Authentication
+import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
+import { auth, provider, db } from '../firebase';
+import { collection, addDoc, getDocs, query, where, deleteDoc, doc, updateDoc, arrayUnion, getDoc, arrayRemove } from 'firebase/firestore';
+
+// long press
 
 
 const MusicDiscover = () => {
@@ -88,6 +94,10 @@ const MusicDiscover = () => {
       }
   }
 
+  // active tab is selected
+
+  
+
 
   useEffect(()=> {
     if (myFavorites.length == 0) {
@@ -127,10 +137,7 @@ const MusicDiscover = () => {
     });
 }
 
-useEffect(() => {
-   
-  setActiveTab('Songs')
-}, [searchQuery]);
+
 
 
 useEffect(() => {
@@ -236,7 +243,7 @@ useEffect(() => {
         // For offline songs with audioBlob, create a URL from the Blob
         blobUrl = URL.createObjectURL(currentSong.audioBlob);
         sourceUrl = blobUrl;
-        console.log(currentSong)
+       
       } else {
         throw new Error('Invalid audio source.');
       }
@@ -280,21 +287,10 @@ useEffect(() => {
       const formattedSong = {
         title: song.name,
         name: song.primaryArtists,
-        albumArt: song.image[2].link,
-        downloadUrl: song.downloadUrl[audioQuality].link,  // Ensure this link exists
+        albumArt: song.image[2].link || song.albumArt,
+        downloadUrl: song.downloadUrl[audioQuality].link || song.downloadUrl,  // Ensure this link exists
       };
-      if (song) {
-        if (myFavorites.length >= 5) {
-          
-          myFavorites.shift()
-        }
-        myFavorites.push(song)
-        localStorage.setItem('last_played', JSON.stringify(myFavorites));
-        
-      //  handleSaveOffline(song)
-
-      }
-    
+      
       setCurrentSong(formattedSong);  // Set the new song
       playSong(formattedSong);  // Start playing the song
       setIsPlayerVisible(true);  // Show the player UI
@@ -356,7 +352,20 @@ useEffect(() => {
     
     
     
-    
+    useEffect(() => {
+      const audio = audioRef.current;
+      const updateProgress = () => {
+        const currentProgress = (audio.currentTime / audio.duration) * 100 || 0;
+        setProgress(currentProgress);
+      };
+      // Add event listener for `timeupdate`
+      audio.addEventListener("timeupdate", updateProgress);
+      // Cleanup event listener
+      return () => {
+        audio.removeEventListener("timeupdate", updateProgress);
+      };
+    }, []);
+  
     
   
     const handleProgressChange = (e) => {
@@ -541,6 +550,274 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
  
 
 
+ // Authentication handlers with playlist 
+
+ const [ user, setUser ] = useState(null);
+ 
+ async function HandleGoogleLogin() {
+  try {
+    const result = await signInWithPopup(auth, provider);
+  
+    setUser(result.user);
+  }
+  catch (error) {
+    console.error('Error logging in with Google:', error);
+  }
+ }
+
+ async function HandleSignOut() {
+  try {
+    await signOut(auth);
+  
+    setUser(null);
+  }
+  catch (error) {
+    console.error('Error signing out:', error);
+  }
+ }
+
+
+ useEffect(() => {
+  
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        
+      } else {
+        setUser(null);
+      }
+    });
+
+    
+    return () => unsubscribe();
+ }, [])
+
+
+ // playlist support
+
+const [isPlaylistOpen, setIsPlaylistOpen] = useState(false);
+
+const togglePlaylist = () => {
+  
+  setIsPlaylistOpen(!isPlaylistOpen);
+};
+ 
+const [playlists, setPlaylists] = useState([]);
+const [playlistName, setPlaylistName] = useState('');
+const [playlistCategory, setPlaylistCategory] = useState('Public'); // Default category
+const [publicPlaylistLink, setPublicPlaylistLink] = useState(null);
+const [addToPlaylistDropDown, setAddToPlaylistDropDown] = useState(false);
+const [playlistSongs, setPlaylistSongs] = useState([]);
+const [playlistSongsDrawer, setPlaylistSongsDrawer] = useState(false);
+const [ selectedPlaylist, setSelectedPlaylist] = useState(null);
+
+const togglePlaylistSongsDrawer = () => {
+  setPlaylistSongsDrawer((prev) => !prev);
+}
+
+
+
+
+
+const createPlaylist = async (imageUrl) => {
+  if (!playlistName.trim()) {
+    alert("Playlist name cannot be empty");
+    return;
+  }
+  
+  // Check if playlist name already exists
+  const existingPlaylist = playlists.find(
+    (playlist) => playlist.name.toLowerCase() === playlistName.toLowerCase()
+  );
+
+  if (existingPlaylist) {
+    alert("A playlist with this name already exists.");
+    return;
+  }
+
+  try {
+    const docRef = await addDoc(collection(db, "playlists"), {
+      name: playlistName || `MyPlaylist ${playlists.length + 1}`, // Default name
+      category: playlistCategory,
+      imageUrl: imageUrl || null,
+      userId: user.uid,
+      createdAt: new Date(),
+      songs: [],
+    });
+
+    setPlaylists((prev) => [
+      ...prev,
+      { id: docRef.id, name: playlistName, category: playlistCategory, songs: [] },
+    ]);
+    setPlaylistName(''); // Reset input
+    setPlaylistCategory('Public'); // Reset category
+    
+  } catch (e) {
+    console.error("Error creating playlist: ", e);
+  
+  }
+};
+
+const handleCreatingPlaylist = (e) => {
+  const getRandomHexColor = () => {
+    let randomColor;
+    do {
+      // Generate a random hex color
+      randomColor = `${Math.floor(Math.random() * 16777215).toString(16)}`;
+  
+      // Ensure the color is not white (#FFFFFF)
+    } while (randomColor === "#ffffff" || randomColor === "#FFFFFF");
+  
+    return randomColor;
+  };
+  if (e.key === 'Enter') {
+    const imageUrl = `https://ui-avatars.com/api/?name=${playlistName.split(' ').join('+')}&rounded=true&background=${getRandomHexColor()}&color=ffffff`
+    createPlaylist(imageUrl);
+    togglePlaylist();
+  }
+}
+
+const getPlaylists = async () => {
+  try {
+    const q = query(collection(db, "playlists"), where("userId", "==", user.uid));
+    const querySnapshot = await getDocs(q);
+    const data = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    setPlaylists(data);
+    
+  } catch (e) {
+    console.error("Error fetching playlists: ", e);
+  }
+};
+
+const getPlaylistSongs = async (playlistId, userId) => {
+  try {
+    // Query playlists by both userId and document ID
+    const q = query(
+      collection(db, "playlists"),
+      where("userId", "==", userId), // Filter by userId
+      where("__name__", "==", playlistId) // Filter by document ID
+    );
+
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+      const playlist = querySnapshot.docs[0].data();
+      setPlaylistSongs(playlist.songs || []); // Set playlist songs
+      console.log("Playlist songs:", playlist.songs);
+    } else {
+      console.error("No playlist found for the given user and playlist ID.");
+      setPlaylistSongs([]);
+    }
+  } catch (error) {
+    console.error("Error fetching playlist songs:", error);
+  }
+};
+
+
+
+
+
+const deletePlaylist = async (playlistId) => {
+  try {
+    const playlistRef = doc(db, 'playlists', playlistId);
+    await deleteDoc(playlistRef);
+    setPlaylists((prev) => prev.filter((playlist) => playlist.id !== playlistId));
+    
+  }
+  catch (error) {
+    console.error('Error deleting playlist:', error);
+    
+  }
+}
+
+const addSongToPlaylist = async (playlistId, song, playlists, setPlaylists) => {
+  try {
+    // Reference the specific playlist document
+    const playlistRef = doc(db, "playlists", playlistId);
+
+    // Update the playlist document to add the song to the 'songs' array
+    await updateDoc(playlistRef, {
+      songs: arrayUnion(song),
+    });
+    getPlaylists();
+
+   
+
+    // Immediately update the playlists state
+    const updatedPlaylists = playlists.map((playlist) => {
+      if (playlist.id === playlistId) {
+        // Add the song to the playlist's songs array locally
+        return { ...playlist, songs: [...playlist.songs, song] };
+      }
+      return playlist;
+    });
+
+    setPlaylists(updatedPlaylists); // Update state to reflect the change
+
+  } catch (error) {
+    console.error("Error adding song to playlist: ", error);
+  }
+};
+const deleteSongFromPlaylist = async (playlistId, song) => {
+  try {
+    // Reference the specific playlist document
+    const playlistRef = doc(db, "playlists", playlistId);
+
+    // Update the playlist document to remove the song from the 'songs' array
+    await updateDoc(playlistRef, {
+      songs: arrayRemove(song), // Remove the song from the array
+    });
+    getPlaylistSongs(selectedPlaylist?.id, user.uid); // Fetch songs for the selected playlist
+    
+
+  
+  } catch (error) {
+    console.error("Error removing song from playlist: ", error);
+  }
+};
+
+
+
+const sharePlaylist = (playlistId) => {
+  const link = `${window.location.origin}/playlist/${playlistId}`;
+  setPublicPlaylistLink(link);
+  navigator.clipboard.writeText(link);
+  alert("Playlist link copied to clipboard!");
+};
+
+const [isPlaylistSongsDrawerOpen, setPlaylistSongsDrawerOpen] = useState(false);
+const [isPlaylistCreationDrawerOpen, setPlaylistCreationDrawerOpen] = useState(false);
+
+const handlePlaylistSongsDrawer = () =>
+  setPlaylistSongsDrawerOpen(!isPlaylistSongsDrawerOpen);
+
+const togglePlaylistCreationDrawer = () =>
+  setPlaylistCreationDrawerOpen(!isPlaylistCreationDrawerOpen);
+
+
+
+const [dropdownVisibility, setDropdownVisibility] = useState({}); // Store visibility for each song
+
+// Toggle dropdown visibility for specific song
+const toggleAddToPlaylistDropDown = (songId) => {
+  setDropdownVisibility((prevState) => ({
+    ...prevState,
+    [songId]: !prevState[songId], // Toggle visibility
+  }));
+};
+
+
+useEffect(() => {
+  if (user) {
+    getPlaylists(); // Fetch playlists once user is set
+   
+   
+   
+
+  }
+}, [user]); // This effect runs whenever `user` changes
+
+
   return (
     <div className="flex flex-col items-center justify-between min-h-screen px-4 py-2 bg-gray-50 dark:text-slate-400 dark:bg-zinc-900">
     
@@ -567,6 +844,8 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
   </div>
 
   {/* Right side: Dark Mode Button */}
+
+ 
   
   <button
   onClick={() => {setIsPlayerVisible(false); 
@@ -584,7 +863,8 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
 
 
 
-    { currentSong && <div style={{position: 'fixed', right: '-10px', borderRadius: '18px 0 0 18px', top: '60%' }} onClick={()=> setIsPlayerVisible(!isPlayerVisible)} className='z-50 cursor-pointer border-0 player-btn px-4 py-2 text-sm font-medium text-white bg-indigo-600'><i  className="fa-solid fa-headphones cursor-pointer"></i>
+
+    { currentSong && <div style={{position: 'fixed', right: '-10px', borderRadius: '18px 0 0 18px', top: '60%' }} onClick={()=> setIsPlayerVisible(!isPlayerVisible)} className=' overflow-hidden  z-50 cursor-pointer border-0 player-btn px-4 py-2 text-sm font-medium text-white bg-indigo-600'><i  className="fa-solid fa-headphones cursor-pointer"></i>
     </div>}
   </div>
           </div>
@@ -630,10 +910,11 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
           </span>
 
            <span
-            onClick={() => {setActiveTab('Offline'),  setIsPlayerVisible(false)} }
-            className={`hidden cursor-pointer ${activeTab === 'Offline' ? 'border-b-2 border-yellow-400' : 'text-gray-400 hover:text-gray-800'}`}
+            onClick={() => {setActiveTab('Playlist'),  setIsPlayerVisible(false)
+            } }
+            className={` cursor-pointer ${activeTab === 'Offline' ? 'border-b-2 border-yellow-400' : 'text-gray-400 hover:text-gray-800'}`}
           >
-            Offline
+            Playlist
           </span>
 
         
@@ -670,41 +951,81 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
             
             <div className='overflow-y-auto '>
             <ul className="space-y-4 ">
-              {songs.length > 0 ? songs.map((song, index) => (
-                <li
-                  key={index}
-                  className="flex items-center justify-between p-2 bg-white rounded-lg shadow dark:text-slate-400 dark:bg-zinc-900 custom"
-                  
-                >
-                  <div className="flex items-center" >
-                    <img
-                      src={song.image[0].link}
-                      alt={song.title}
-                      className="w-10 h-10 rounded-lg cursor-pointer"
-                     
-                    />
-                    <div className="ml-3">
-                      <h4 className="text-base font-semibold cursor-pointer" onClick={() => handleSongClick(song)}>{song.name}</h4>
-                      <p className="text-sm text-gray-500">
-                        {song.primaryArtists} &nbsp; &nbsp;
-                        <span className="text-sm text-gray-400">
-                          {song.formattedDuration}
-                        </span> &nbsp; &nbsp; &nbsp; &nbsp;
-                        <span className='cursor-pointer' onClick={(e) => { e.stopPropagation(); handleFavorite(song); }}>
-                          {isSongFavorite(song.id) ? <FaHeartSolid color="red" /> : <FaHeartRegular />}
-                        </span>
-
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => {togglePlayPause(song.downloadUrl[audioQuality].link), handleSongClick(song)}}
-                    className="text-gray-400 cursor-pointer"
+            {songs.length > 0 ? (
+        songs.map((song, index) => (
+          <li
+            key={index}
+            className="flex items-center me-7 z-1 justify-between p-2 bg-white rounded-lg shadow dark:text-slate-400 dark:bg-zinc-900 custom relative"
+          >
+            <div className="flex items-center">
+              {/* Song Image */}
+              <img
+                src={song.image[0].link}
+                alt={song.title}
+                className="w-10 h-10 rounded-lg cursor-pointer"
+              />
+              <div className="ml-3">
+                <h4 className="text-base font-semibold cursor-pointer" onClick={() => handleSongClick(song)}>
+                  {song.name}
+                </h4>
+                <p className="text-sm text-gray-500">
+                  {song.primaryArtists} &nbsp; &nbsp;
+                  <span className="text-sm text-gray-400">{song.formattedDuration}</span> &nbsp; &nbsp; &nbsp; &nbsp;
+                  <span
+                    className="cursor-pointer"
+                    onClick={(e) => { e.stopPropagation(); handleFavorite(song); }}
                   >
-                    {isPlaying && audioRef.current.src === song.downloadUrl[audioQuality].link ? <FaPause /> : <FaPlay />}
-                  </button>
-                </li>
-              )) : <Loader />}
+                    {isSongFavorite(song.id) ? <FaHeartSolid color="red" /> : <FaHeartRegular />}
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            {/* Add to Playlist Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent event propagation to avoid triggering other buttons
+                toggleAddToPlaylistDropDown(song.id);
+              }}
+              className="pe-3 text-white shadow-md ml-2 flex items-center justify-center"
+            >
+              <i className="fa-solid fa-ellipsis-vertical"></i>
+            </button>
+
+            {/* Dropdown Menu for Adding to Playlist */}
+            {dropdownVisibility[song.id] && (
+              <div className="absolute right-9 top-2 z-40 mt-2 w-32 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 dark:bg-gray-800">
+                <ul className="py-1">
+                  {playlists.length > 0 ? (
+                    playlists.map((playlist) => (
+                      <li
+                        key={playlist.id}
+                        onClick={() => {
+                      
+                          addSongToPlaylist(playlist.id, song);
+                          setDropdownVisibility((prevState) => ({
+                            ...prevState,
+                            [song.id]: false, // Close dropdown after selecting
+                          }));
+                        }}
+                        className="px-4 py-1.5  text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 cursor-pointer"
+                      >
+                        
+                        {playlist.name}
+                      </li>
+                    ))
+                  ) : (
+                    <li className="px-4 py-2 text-sm text-gray-500">No playlists available</li>
+                  )}
+                </ul>
+              </div>
+            )}
+          </li>
+        ))
+      ) : (
+        <Loader />
+      )}
+
             </ul>
             </div>
 
@@ -1003,43 +1324,192 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
             </div>
         )}
 
-      {/*
-        {activeTab === 'Offline' && (
-       <li>
-           <button
-             type="button"
-             className="flex items-center w-full p-2 text-base text-gray-900 transition duration-75 rounded-lg group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-           >
-             <span className="flex-1 ms-3 text-left rtl:text-right whitespace-nowrap">
-               Last Played
-             </span>
-             <span className="inline-flex me-2 items-center justify-center w-3 h-3 p-3 ms-3 text-sm font-medium text-blue-800 bg-blue-100 rounded-full dark:bg-blue-900 dark:text-blue-300">
-               {offlineSongs.length}
-             </span>
-             <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
-               <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 4 4 4-4" />
-             </svg>
-           </button>
-           <ul id="dropdown-example" className={`${isDropdownOpen ? '' : 'hidden'} py-2 space-y-2`}>
-             {offlineSongs.length > 0 &&
-               offlineSongs.map((song, index) => (
-                 <li
-                   key={index}
-                   className="flex items-center justify-start ps-4 cursor-pointer"
-                   onClick={() => togglePlayPause(song)}
-                 >
-                   <img src={song.image || song.albumArt} alt="" className="w-11 rounded-sm" />
-                   <a
-                     className="flex items-center w-full p-2 text-gray-900 transition duration-75 rounded-lg pl-11 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-                   >
-                     {song.name}
-                   </a>
-                 </li>
-               ))}
-           </ul>
-       </li>
-       )}*/}
+      
+{activeTab === 'Playlist' && (
+  <div>
+    {user ? (
+      <div>
+        <h3 className="mb-4 text-lg font-semibold">
+          Playlists <i className="fa-solid fa-guitar ps-2 text-blue-300"></i>
+        </h3>
+
+        {/* List of Playlists */}
+        {playlists.length > 0 ? (
+          playlists.map((playlist) => (
+            <div key={playlist.id}>
+              <div
+                className="flex items-center justify-between p-2 bg-white rounded-lg shadow cursor-pointer dark:text-slate-400 dark:bg-zinc-900"
+                onClick={() => {
+                  getPlaylistSongs(playlist.id, user?.uid);
+                  handlePlaylistSongsDrawer(); // Open playlist songs drawer
+                  setSelectedPlaylist(playlist);
+                  
+                }}
+              >
+                <div className="flex items-center">
+                  
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" color="#eabd11" fill="none">
+    <path d="M7 9.5C7 10.8807 5.88071 12 4.5 12C3.11929 12 2 10.8807 2 9.5C2 8.11929 3.11929 7 4.5 7C5.88071 7 7 8.11929 7 9.5ZM7 9.5V2C7.33333 2.5 7.6 4.6 10 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="10.5" cy="19.5" r="2.5" stroke="currentColor" strokeWidth="1.5" />
+    <circle cx="20" cy="18" r="2" stroke="currentColor" strokeWidth="1.5" />
+    <path d="M13 19.5L13 11C13 10.09 13 9.63502 13.2466 9.35248C13.4932 9.06993 13.9938 9.00163 14.9949 8.86504C18.0085 8.45385 20.2013 7.19797 21.3696 6.42937C21.6498 6.24509 21.7898 6.15295 21.8949 6.20961C22 6.26627 22 6.43179 22 6.76283V17.9259" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M13 13C17.8 13 21 10.6667 22 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+</svg>
+                  <div className="ml-3">
+                    <h4 className="text-base font-semibold">{playlist.name}</h4>
+                    <p className="text-sm text-gray-500">
+                      {playlist.songs.length} songs &nbsp; &nbsp;
+                      <span className="text-sm text-gray-400">{playlist.category}</span>
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      sharePlaylist(playlist.id);
+                    }}
+                    className="text-gray-400 cursor-pointer hidden"
+                  >
+                    <i className="fa-solid fa-share"></i>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deletePlaylist(playlist.id);
+                    }}
+                    className="text-gray-400 cursor-pointer"
+                  >
+                    <i className="fa-solid fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <p>No playlists found</p>
+        )}
+
+        {/* Add Playlist Button */}
+        <div className="absolute right-6 bottom-10">
+          <button
+            title="Add New"
+            className="group cursor-pointer outline-none hover:rotate-90 duration-300"
+            onClick={togglePlaylistCreationDrawer} // Open playlist creation drawer
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="50px"
+              height="50px"
+              viewBox="0 0 24 24"
+              className="stroke-zinc-400 fill-none group-hover:fill-zinc-800 group-active:stroke-zinc-200 group-active:fill-zinc-600 group-active:duration-0 duration-300"
+            >
+              <path
+                d="M12 22C17.5 22 22 17.5 22 12C22 6.5 17.5 2 12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22Z"
+                strokeWidth="1.5"
+              ></path>
+              <path d="M8 12H16" strokeWidth="1.5"></path>
+              <path d="M12 16V8" strokeWidth="1.5"></path>
+            </svg>
+          </button>
+        </div>
+
+        {/* Playlist Songs Drawer */}
+        <div
+          className={`fixed top-0 right-0 h-full w-80 bg-white shadow-lg dark:bg-zinc-900 transform ${
+            isPlaylistSongsDrawerOpen ? 'translate-x-0' : 'translate-x-full'
+          } transition-transform duration-300`}
+        >
+          <div className="p-4 border-b dark:border-gray-700">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold dark:text-slate-400">Playlist Songs</h3>
+              <button onClick={handlePlaylistSongsDrawer}>
+                <i className="fa-solid fa-times text-gray-400"></i>
+              </button>
+            </div>
+          </div>
+          <div className="p-4">
+            {playlistSongs.length > 0 ? (
+              <ul className="space-y-3">
+                {playlistSongs.map((song, index) => (
+                  <li
+                    key={index}
+                    
+                    className="flex items-center justify-between p-2 bg-gray-100 rounded-lg shadow dark:bg-gray-800"
+                  >
+                    <div className="flex items-center gap-2" 
+                    onClick={() => handleSongClick(song)}>
+                      <img
+                        src={song.imageUrl || song.image[1].link || song.albumArt || 'default_song_thumbnail.jpg'}
+                        alt="Song"
+                        className="w-10 h-10 rounded-lg"
+                      />
+                      <div>
+                        <p className="text-sm font-medium">{song.name}</p>
+                        <p className="text-xs text-gray-500">{song.artist}</p>
+                      </div>
+                    </div>
+                    <button
+                      className="text-gray-400"
+                      onClick={() => deleteSongFromPlaylist(selectedPlaylist.id, song)}
+                    >
+                      <i className="fa-solid fa-trash"></i>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-center text-gray-500">No songs in this playlist</p>
+            )}
+          </div>
+        </div>
+
+        {/* Playlist Creation Drawer */}
+        <div
+          className={`fixed bottom-0 left-0 w-full bg-white shadow-lg dark:bg-zinc-900 transform ${
+            isPlaylistCreationDrawerOpen ? 'translate-y-0' : 'translate-y-full'
+          } transition-transform duration-300`}
+        >
+          <div className="p-4 border-b dark:border-gray-700">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold dark:text-slate-400">Create Playlist</h3>
+              <button onClick={togglePlaylistCreationDrawer}>
+                <i className="fa-solid fa-times text-gray-400"></i>
+              </button>
+            </div>
+          </div>
+          <div className="p-4">
+            <input
+              type="text"
+              placeholder="Playlist Name"
+              value={playlistName}
+              onChange={(e) => setPlaylistName(e.target.value)}
+              onKeyDown={handleCreatingPlaylist}
+              className="w-full p-2 bg-gray-100 rounded-lg dark:bg-gray-800 dark:text-slate-400"
+            />
+          </div>
+        </div>
+      </div>
+    ) : (
+      <div className="flex items-center flex-col gap-6 justify-center h-96">
+        <div className="min-h-24 bg-gray-200 flex items-center justify-center rounded-lg shadow-white dark:shadow-slate-600 dark:bg-zinc-600 px-6">
+          <div className="flex items-center flex-col gap-2 justify-center">
+            <h1 className="dark:text-white text-slate-900">Welcome to Syncy</h1>
+            <p className="dark:text-white text-slate-900">Sign in to access Playlists</p>
+          </div>
+        </div>
+        <button onClick={HandleGoogleLogin} className="tooltip-container">
+          <div className="button-content">
+            <span className="text">Login to access playlist feature 🫡</span>
+          </div>
+        </button>
+      </div>
+    )}
+  </div>
+)}
+
+
       </div>
 
       {/* Player Container */}
@@ -1065,13 +1535,15 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
    <div className="py-4 overflow-y-auto">
       <ul className="space-y-2 font-medium">
          <li >
-            <a href="#" className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
-               <svg className="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 22 21">
-                  <path d="M16.975 11H10V4.025a1 1 0 0 0-1.066-.998 8.5 8.5 0 1 0 9.039 9.039.999.999 0 0 0-1-1.066h.002Z"/>
-                  <path d="M12.5 0c-.157 0-.311.01-.565.027A1 1 0 0 0 11 1.02V10h8.975a1 1 0 0 0 1-.935c.013-.188.028-.374.028-.565A8.51 8.51 0 0 0 12.5 0Z"/>
-               </svg>
-               <span className="ms-3">Dashboard</span>
-            </a>
+           { user && (
+             <a href="#" className=" flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
+             <svg className="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 22 21">
+                <path d="M16.975 11H10V4.025a1 1 0 0 0-1.066-.998 8.5 8.5 0 1 0 9.039 9.039.999.999 0 0 0-1-1.066h.002Z"/>
+                <path d="M12.5 0c-.157 0-.311.01-.565.027A1 1 0 0 0 11 1.02V10h8.975a1 1 0 0 0 1-.935c.013-.188.028-.374.028-.565A8.51 8.51 0 0 0 12.5 0Z"/>
+             </svg>
+             <span className="ms-3">{user.displayName}</span>
+          </a>)
+           }
          </li>
          <li>
           
@@ -1124,13 +1596,13 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
             
          </li>
         
-         <li className='hidden'>
+         <li className='' onClick={user ? HandleSignOut : HandleGoogleLogin}>
             <a href="#" className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
-               <svg className="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="m17.418 3.623-.018-.008a6.713 6.713 0 0 0-2.4-.569V2h1a1 1 0 1 0 0-2h-2a1 1 0 0 0-1 1v2H9.89A6.977 6.977 0 0 1 12 8v5h-2V8A5 5 0 1 0 0 8v6a1 1 0 0 0 1 1h8v4a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-4h6a1 1 0 0 0 1-1V8a5 5 0 0 0-2.582-4.377ZM6 12H4a1 1 0 0 1 0-2h2a1 1 0 0 1 0 2Z"/>
-               </svg>
-               <span className="flex-1 ms-3 whitespace-nowrap">Inbox</span>
-               <span className="inline-flex items-center justify-center w-3 h-3 p-3 ms-3 text-sm font-medium text-blue-800 bg-blue-100 rounded-full dark:bg-blue-900 dark:text-blue-300">3</span>
+              <span className="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white">
+               <i className="fa-solid fa-user"></i>
+              </span>
+              <span className="flex-1 ms-3 whitespace-nowrap">{user ? 'Log out' : 'Sign in'}</span>
+               
             </a>
          </li>
          
@@ -1175,14 +1647,58 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
 >
 {currentSong && (
   <>
-    <div className="flex items-center justify-start mt-2">
+    <div className="flex items-center justify-between mt-2 relative">
       <button
         onClick={() => setIsPlayerVisible(false)}
         className="w-10 h-10 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700 ml-2"
       >
         <i className="fa-solid fa-chevron-down"></i>
       </button>
+      
+      {/* Dropdown Button */}
+
+      <div className="relative inline-block text-left">
+
+{/* Dropdown Menu */}
+{addToPlaylistDropDown && (
+  <div className="absolute left-0 top-3 z-40 mt-2 w-32 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 dark:bg-gray-800">
+    <ul className="py-1">
+      {playlists.length > 0 ? (
+        playlists.map((playlist) => (
+          <li
+            key={playlist.id}
+            onClick={() => {
+             
+              addSongToPlaylist(playlist.id, currentSong);
+              setAddToPlaylistDropDown(false); // Close dropdown
+            }}
+            className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 cursor-pointer"
+          >
+            {playlist.name}
+          </li>
+        ))
+      ) : (
+        <li className="px-4 py-2 text-sm text-gray-500">No playlists available</li>
+      )}
+    </ul>
+  </div>
+)}
+</div>
+      <button
+        onClick={toggleAddToPlaylistDropDown}
+        className="hidden w-10 h-10 rounded-full bg-gray-800 text-white shadow-md hover:bg-gray-700 ml-2 flex items-center justify-center"
+      >
+        <i className="fa-solid fa-ellipsis-vertical"></i>
+      </button>
+     
+    
+
+
+     
     </div>
+    
+
+
     <div className="flex flex-col items-center py-4">
       <div className="flip-card w-72 h-72 rounded-lg shadow-lg">
         <div
@@ -1201,12 +1717,14 @@ const [isDrawerOpen, setIsDrawerOpen] = useState(isOpen);
           </div>
 
           {/* Back of the flip card */}
-          <div className="flip-card-back w-72 h-72 rounded-lg shadow-lg" onClick={() => setIsFlipped(false)} />
+          <div className="flip-card-back w-72 h-72 rounded-lg shadow-lg" onClick={() => setIsFlipped(false)} >
+           
+           </div>
         </div>
       </div>
 
       <h3 className="text-2xl font-bold">{currentSong.title}</h3>
-      <p className="text-gray-500" onClick={() => { setSearchQuery(currentSong.name); setIsPlayerVisible(false); }}>
+      <p className="text-gray-500 cursor-pointer" onClick={() => { setSearchQuery(currentSong.name); setIsPlayerVisible(false); }}>
         {currentSong.name}
       </p>
 
